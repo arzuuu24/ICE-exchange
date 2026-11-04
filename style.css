@@ -1,0 +1,14 @@
+/* Custom 3-Color Adobe Palette Integration */
+.text-gold { color: #D6AA72; }
+.bg-gold { background-color: #D6AA72; }
+.border-purple { border-color: #9B72D6; }
+.text-emerald { color: #52D672; }
+
+.gate-hidden { display: none !important; }
+.shell-hidden { display: none !important; }
+.gate-active { display: flex !important; }
+.shell-active { display: block !important; }
+
+/* Admin Hide Rules */
+.admin-only { display: none; }
+.admin-logged-in .admin-only { display: block; }
