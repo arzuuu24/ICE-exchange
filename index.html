@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>International Cricket Exchange (ICE)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase Core Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-[#0B0F17] text-white transition-colors duration-300">
+    <div id="authGateOverlay" class="gate-active fixed inset-0 z-50 flex items-center justify-center bg-[#0B0F17]">
+        <div class="bg-[#111827] p-8 rounded-xl border border-[#1F2937] text-center max-w-md w-full">
+            <div class="ice-logo-box mx-auto mb-4 w-[44px] h-[44px] overflow-hidden rounded-full">
+                <img src="WhatsApp Image 2026-11-02 at 10.10.52 AM.jpeg" alt="" class="w-full h-full object-cover">
+            </div>
+            <h1 class="text-2xl font-bold text-[#D6AA72] mb-6">Welcome to ICE</h1>
+            <button onclick="handleGateSignIn()" class="w-full bg-[#52D672] text-black font-bold py-3 rounded hover:bg-green-400 transition mb-4">Enter Exchange</button>
+        </div>
+    </div>
+
+    <div id="mainExchangeShell" class="shell-hidden container mx-auto px-4 py-6">
+        <!-- Main Exchange UI Goes Here -->
+        <h2 class="text-[#9B72D6] text-xl font-bold">ICE Live Market Floor</h2>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
