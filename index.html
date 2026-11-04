@@ -2112,7 +2112,6 @@
     <script>
         const STORAGE_KEY = 'ICE_EXCHANGE_STATE_V8_CLEAN_PROD';
         const ADMIN_USERNAME = 'admin';
-        const ADMIN_SECRET = '1@Adit2010';
         const TRADE_FEE_RATE = 0.07; // 7% ST Cut on all Buy and Sell orders
         const SUPABASE_URL = 'https://pzbhunfqymwktkzkzdtf.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_2RvTxyGo_EAbaXskK3uwFQ_H9l9iiXD';
@@ -2558,25 +2557,45 @@
             }
         }
 
-        function handleGateSignIn(event) {
+        async function handleGateSignIn(event) {
             event.preventDefault();
             const username = document.getElementById('loginUsernameInput').value.trim();
             const password = document.getElementById('loginPasswordInput').value;
             const errEl = document.getElementById('gateSignInError');
             errEl.classList.add('hidden');
 
-            if (username.toLowerCase() === ADMIN_USERNAME && password === ADMIN_SECRET) {
-                state.isAuthenticated = true;
-                state.hasEnteredFloor = true;
-                state.isAdmin = true;
-                state.traderHandle = 'Exchange_Admin';
-                saveStateToStorage();
-                renderAuthGateOrMainApp();
-                renderAllViews();
-                switchMainTab('admin');
-                showToast('Welcome Admin! Full exchange control panel unlocked.', 'success');
-                return;
+            if (username.toLowerCase() === ADMIN_USERNAME) {
+        let isValidAdmin = false;
+        try {
+            if (supabaseClient) {
+                const { data, error } = await supabaseClient.rpc('verify_admin_secret', {
+                    input_secret: password
+                });
+                isValidAdmin = Boolean(data);
             }
+        } catch (e) {
+            console.error('Supabase admin check failed:', e);
+        }
+
+        if (isValidAdmin) {
+            sessionStorage.setItem('ice_admin_token', password);
+            state.isAuthenticated = true;
+            state.hasEnteredFloor = true;
+            state.isAdmin = true;
+            state.traderHandle = 'Exchange_Admin';
+            saveStateToStorage();
+            renderAuthGateOrMainApp();
+            renderAllViews();
+            switchMainTab('admin');
+            showToast('Welcome Admin! Full exchange control panel unlocked.', 'success');
+            return;
+        } else {
+            errEl.textContent = 'Invalid Admin credentials.';
+            errEl.classList.remove('hidden');
+            return;
+        }
+    }
+    
 
             const user = (state.registeredUsers || []).find(
                 u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
