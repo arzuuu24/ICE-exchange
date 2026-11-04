@@ -896,24 +896,24 @@
                     <div class="ice-card p-5 space-y-4 border-2 border-[#9B72D6]/50">
                         <div class="flex items-center justify-between border-b border-[#9B72D6]/20 pb-3">
                             <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-[#9B72D6]">⚡ Order Execution Desk</span>
-                            <span id="deskSupplyTag" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[#52D672]/15 text-[#52D672]">Pool: 740 / 1000</span>
+                            <span id="deskSupplyTag" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[#52D672]/15 text-[#52D672]">Pool: 0 / 0</span>
                         </div>
 
                         <!-- Selected Asset Header -->
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-3 min-w-0">
-                                <img id="deskPlayerAvatar" src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=400&q=80" alt="" onerror="this.src='https://placehold.co/100x100/171522/D6AA72?text=ICE'" class="w-12 h-12 rounded-xl object-cover border-2 border-[#D6AA72] shrink-0">
+                                <img id="deskPlayerAvatar" src="https://placehold.co/100x100/171522/D6AA72?text=ICE" alt="" onerror="this.src='https://placehold.co/100x100/171522/D6AA72?text=ICE'" class="w-12 h-12 rounded-xl object-cover border-2 border-[#D6AA72] shrink-0">
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5">
-                                        <span id="deskTicker" class="font-mono text-xs font-extrabold px-2 py-0.5 rounded badge-ice-volt">VK18</span>
-                                        <span id="deskTeamBadge" class="text-[10px] font-mono px-2 py-0.5 rounded badge-ice-olive truncate">IND • Batsman</span>
+                                        <span id="deskTicker" class="font-mono text-xs font-extrabold px-2 py-0.5 rounded badge-ice-volt">NONE</span>
+                                        <span id="deskTeamBadge" class="text-[10px] font-mono px-2 py-0.5 rounded badge-ice-olive truncate">Awaiting Listing</span>
                                     </div>
-                                    <h3 id="deskPlayerName" class="font-extrabold text-sm sm:text-base truncate mt-1">Virat Kohli</h3>
+                                    <h3 id="deskPlayerName" class="font-extrabold text-sm sm:text-base truncate mt-1">No Stock Selected</h3>
                                 </div>
                             </div>
                             <div class="text-right shrink-0">
-                                <div id="deskPriceST" class="font-mono font-extrabold text-base sm:text-lg text-[#D6AA72]">340.00 ST</div>
-                                <span id="deskChangeBadge" class="font-mono text-xs font-bold text-[#52D672]">+4.6%</span>
+                                <div id="deskPriceST" class="font-mono font-extrabold text-base sm:text-lg text-[#D6AA72]">0.00 ST</div>
+                                <span id="deskChangeBadge" class="font-mono text-xs font-bold text-[#52D672]">0.0%</span>
                             </div>
                         </div>
 
@@ -1134,6 +1134,7 @@
                                     <th class="py-3 px-3">Holdings Value (ST)</th>
                                     <th class="py-3 px-3">Cash Reserve (ST)</th>
                                     <th class="py-3 px-3 text-right">Total Net Worth</th>
+                                    <th id="leaderboardAdminActionHeader" class="hidden py-3 px-3 text-right">Admin Action</th>
                                 </tr>
                             </thead>
                             <tbody id="leaderboardTableBody" class="divide-y divide-[#9B72D6]/20"></tbody>
@@ -1188,6 +1189,7 @@
                         <input id="adminGlobalPctInput" type="number" step="0.5" value="5" class="w-16 px-2.5 py-1.5 font-mono text-xs text-center rounded-lg bg-[#111827] border border-slate-600 text-white">
                         <button onclick="adminGlobalMarketMove(1)" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-extrabold text-xs transition">+% Rally All</button>
                         <button onclick="adminGlobalMarketMove(-1)" class="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-400 text-white font-mono font-extrabold text-xs transition">-% Drop All</button>
+                        <button onclick="adminPurgeAllExchangeData()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-400 hover:bg-amber-400 text-amber-300 hover:text-slate-950 font-mono font-extrabold text-xs transition">🧹 Purge / Reset Clean</button>
                     </div>
                 </div>
 
@@ -2106,11 +2108,22 @@
     <!-- ================================================================= -->
     <!-- COMPLETE APPLICATION JAVASCRIPT                                   -->
     <!-- ================================================================= -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const STORAGE_KEY = 'ICE_EXCHANGE_STATE_V7_ULTIMATE';
+        const STORAGE_KEY = 'ICE_EXCHANGE_STATE_V8_CLEAN_PROD';
         const ADMIN_USERNAME = 'admin';
         const ADMIN_SECRET = '1@Adit2010';
         const TRADE_FEE_RATE = 0.07; // 7% ST Cut on all Buy and Sell orders
+        const SUPABASE_URL = 'https://pzbhunfqymwktkzkzdtf.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_2RvTxyGo_EAbaXskK3uwFQ_H9l9iiXD';
+        let supabaseClient = null;
+        try {
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (err) {
+            console.warn('Supabase client init warning:', err);
+        }
         let leaderboardTimer = null;
 
         const DEFAULT_CUSTOM_SECTIONS = [
@@ -2132,338 +2145,17 @@
             }
         ];
 
-        const DEFAULT_PLAYERS = [
-            // MAIN PLAYER STOCKS
-            {
-                id: 'vk18',
-                section: 'MAIN',
-                name: 'Virat Kohli',
-                ticker: 'VK18',
-                team: 'IND',
-                role: 'Batsman',
-                price: 340.00,
-                prevPrice: 325.00,
-                totalSupply: 1000,
-                availableShares: 740,
-                avatar: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=400&q=80',
-                history: [300, 310, 308, 318, 325, 340]
-            },
-            {
-                id: 'rs45',
-                section: 'MAIN',
-                name: 'Rohit Sharma',
-                ticker: 'RS45',
-                team: 'IND',
-                role: 'Batsman',
-                price: 310.00,
-                prevPrice: 300.00,
-                totalSupply: 1000,
-                availableShares: 810,
-                avatar: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=400&q=80',
-                history: [280, 290, 295, 292, 300, 310]
-            },
-            {
-                id: 'jb93',
-                section: 'MAIN',
-                name: 'Jasprit Bumrah',
-                ticker: 'JB93',
-                team: 'IND',
-                role: 'Bowler',
-                price: 325.00,
-                prevPrice: 310.00,
-                totalSupply: 800,
-                availableShares: 520,
-                avatar: 'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?auto=format&fit=crop&w=400&q=80',
-                history: [290, 295, 302, 308, 310, 325]
-            },
-            {
-                id: 'pc30',
-                section: 'MAIN',
-                name: 'Pat Cummins',
-                ticker: 'PC30',
-                team: 'AUS',
-                role: 'All-Rounder',
-                price: 275.00,
-                prevPrice: 282.00,
-                totalSupply: 900,
-                availableShares: 690,
-                avatar: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=400&q=80',
-                history: [288, 285, 284, 280, 282, 275]
-            },
-            {
-                id: 'hp33',
-                section: 'MAIN',
-                name: 'Hardik Pandya',
-                ticker: 'HP33',
-                team: 'IND',
-                role: 'All-Rounder',
-                price: 260.00,
-                prevPrice: 248.00,
-                totalSupply: 1000,
-                availableShares: 775,
-                avatar: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=400&q=80',
-                history: [235, 240, 242, 245, 248, 260]
-            },
-            {
-                id: 'rp17',
-                section: 'MAIN',
-                name: 'Rishabh Pant',
-                ticker: 'RP17',
-                team: 'IND',
-                role: 'Wicketkeeper',
-                price: 245.00,
-                prevPrice: 238.00,
-                totalSupply: 950,
-                availableShares: 710,
-                avatar: 'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?auto=format&fit=crop&w=400&q=80',
-                history: [220, 225, 230, 234, 238, 245]
-            },
-            // 💎 LIMITED EDITION VAULT STOCKS
-            {
-                id: 'le_msd07',
-                section: 'LIMITED',
-                name: 'MS Dhoni 2011 World Cup Winning Six Edition',
-                ticker: 'MSD07G',
-                team: 'HERITAGE',
-                role: '1 of 50 Sovereign',
-                tagline: 'Minted Serial #01–50 • Wankhede Gold Foil',
-                price: 1250.00,
-                prevPrice: 1120.00,
-                totalSupply: 50,
-                availableShares: 19,
-                avatar: 'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?auto=format&fit=crop&w=400&q=80',
-                history: [980, 1040, 1080, 1120, 1250]
-            },
-            {
-                id: 'le_srt10',
-                section: 'LIMITED',
-                name: 'Sachin Tendulkar 100th International Century Mint',
-                ticker: 'SRT100',
-                team: 'IMMORTAL',
-                role: 'Hall of Fame Mint',
-                tagline: 'Minted Serial #01–40 • Sovereign Platinum Reserve',
-                price: 1480.00,
-                prevPrice: 1390.00,
-                totalSupply: 40,
-                availableShares: 12,
-                avatar: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=400&q=80',
-                history: [1200, 1260, 1310, 1390, 1480]
-            },
-            {
-                id: 'le_vk82',
-                section: 'LIMITED',
-                name: 'Virat Kohli MCG 82* Miracle Collector Card',
-                ticker: 'VK82MCG',
-                team: 'ICONIC',
-                role: '1 of 75 Collector',
-                tagline: 'Shot of the Emperor • Melbourne Night Edition',
-                price: 890.00,
-                prevPrice: 840.00,
-                totalSupply: 75,
-                availableShares: 31,
-                avatar: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=400&q=80',
-                history: [760, 790, 815, 840, 890]
-            },
-            // 🎙️ COMMENTATORS STOCKS
-            {
-                id: 'com_hb',
-                section: 'COMMENTATORS',
-                name: 'Harsha Bhogle',
-                ticker: 'HBVOX',
-                team: 'STUDIO',
-                role: 'Voice of Cricket',
-                tagline: '"What a magnificent advertisement for the game!"',
-                audioClip: 'PRESET_HARSHA',
-                price: 195.00,
-                prevPrice: 182.00,
-                totalSupply: 600,
-                availableShares: 420,
-                avatar: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=400&q=80',
-                history: [165, 172, 178, 182, 195]
-            },
-            {
-                id: 'com_rs',
-                section: 'COMMENTATORS',
-                name: 'Ravi Shastri',
-                ticker: 'TRACER',
-                team: 'STUDIO',
-                role: 'Lead Broadcast Icon',
-                tagline: '"Dhoni finishes off in style! A magnificent strike into the crowd!"',
-                audioClip: 'PRESET_DHONI',
-                price: 215.00,
-                prevPrice: 198.00,
-                totalSupply: 500,
-                availableShares: 330,
-                avatar: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=400&q=80',
-                history: [180, 185, 192, 198, 215]
-            },
-            {
-                id: 'com_ib',
-                section: 'COMMENTATORS',
-                name: 'Ian Bishop',
-                ticker: 'BISH99',
-                team: 'GLOBAL',
-                role: 'Finals Specialist',
-                tagline: '"Carlos Brathwaite! Remember the name!"',
-                audioClip: 'PRESET_REMEMBER',
-                price: 205.00,
-                prevPrice: 194.00,
-                totalSupply: 550,
-                availableShares: 390,
-                avatar: 'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?auto=format&fit=crop&w=400&q=80',
-                history: [175, 182, 188, 194, 205]
-            },
-            {
-                id: 'com_nh',
-                section: 'COMMENTATORS',
-                name: 'Nasser Hussain',
-                ticker: 'NASSUK',
-                team: 'SKYBOX',
-                role: 'Tactical Analyst',
-                tagline: '"Kohli goes down the ground, Kohli goes out of the ground!"',
-                audioClip: 'PRESET_KOHLI',
-                price: 175.00,
-                prevPrice: 170.00,
-                totalSupply: 600,
-                availableShares: 460,
-                avatar: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=400&q=80',
-                history: [160, 164, 168, 170, 175]
-            },
-            // 🏟️ CUSTOM SECTION STOCKS (IPL FRANCHISES & OFFICIAL SPONSORS)
-            {
-                id: 'ipl_csk',
-                section: 'sec_ipl',
-                name: 'Chennai Super Kings Franchise Equity',
-                ticker: 'CSK5X',
-                team: 'IPL',
-                role: 'Franchise Equity',
-                tagline: '5-Time Championship Franchise Unit',
-                price: 540.00,
-                prevPrice: 515.00,
-                totalSupply: 400,
-                availableShares: 245,
-                avatar: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=400&q=80',
-                history: [480, 495, 505, 515, 540]
-            },
-            {
-                id: 'ipl_mi',
-                section: 'sec_ipl',
-                name: 'Mumbai Indians Franchise Equity',
-                ticker: 'MI5X',
-                team: 'IPL',
-                role: 'Franchise Equity',
-                tagline: 'Wankhede Powerhouse Commercial Unit',
-                price: 525.00,
-                prevPrice: 508.00,
-                totalSupply: 400,
-                availableShares: 260,
-                avatar: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=400&q=80',
-                history: [475, 490, 500, 508, 525]
-            },
-            {
-                id: 'ipl_rcb',
-                section: 'sec_ipl',
-                name: 'Royal Challengers Bengaluru Equity',
-                ticker: 'RCBBOLD',
-                team: 'IPL',
-                role: 'Franchise Equity',
-                tagline: 'Highest Fan Engagement Index Equity',
-                price: 510.00,
-                prevPrice: 488.00,
-                totalSupply: 450,
-                availableShares: 210,
-                avatar: 'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?auto=format&fit=crop&w=400&q=80',
-                history: [450, 465, 478, 488, 510]
-            },
-            {
-                id: 'spon_tata',
-                section: 'sec_sponsors',
-                name: 'Title Broadcast & Stadium Sponsor Index',
-                ticker: 'TITLESP',
-                team: 'SPONSOR',
-                role: 'Official Sponsor',
-                tagline: 'Global Cricket Broadcast & Title Rights Pool',
-                price: 410.00,
-                prevPrice: 395.00,
-                totalSupply: 500,
-                availableShares: 350,
-                avatar: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=400&q=80',
-                history: [370, 380, 388, 395, 410]
-            },
-            {
-                id: 'bbl_syd',
-                section: 'sec_sponsors',
-                name: 'Sydney Sixers BBL Franchise Stock',
-                ticker: 'SYDSIX',
-                team: 'BBL',
-                role: 'BBL Franchise',
-                tagline: 'SCG Big Bash League Flagship Club',
-                price: 295.00,
-                prevPrice: 280.00,
-                totalSupply: 450,
-                availableShares: 340,
-                avatar: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=400&q=80',
-                history: [260, 268, 274, 280, 295]
-            }
-        ];
+        // CLEAN PRODUCTION BUILD: ZERO DEMO STOCKS & ZERO DEMO USERS
+        const DEFAULT_STOCKS = [];
+        const DEFAULT_PLAYERS = DEFAULT_STOCKS;
 
         const DEFAULT_MEMBER_TAGS = {
-            'MumbaiBulls_HQ': { text: 'WHALE #1', color: '#D6AA72' },
-            'EdenGardensCap': { text: 'PRO FUND', color: '#9B72D6' },
-            'MelbourneApex': { text: 'VIP TRADER', color: '#52D672' },
             'Exchange_Admin': { text: 'GOVERNOR', color: '#D6AA72' }
         };
 
-        const DEFAULT_NEWS = [
-            {
-                id: 'news-1',
-                headline: 'Virat Kohli Anchors Masterclass Run Chase Under Floodlights',
-                category: 'Match Report',
-                ticker: 'VK18',
-                sentiment: 'BULLISH',
-                impactPct: 4.5,
-                imageUrl: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&w=800&q=80',
-                summary: 'Institutional demand surges for VK18 shares after another unbeaten match-winning century in high-pressure conditions.',
-                timestamp: '25 mins ago',
-                status: 'PUBLISHED'
-            },
-            {
-                id: 'news-2',
-                headline: 'ICE Exchange Opens Limited Edition Heritage Vault & Broadcast Desk',
-                category: 'Regular Update / News',
-                ticker: 'GENERAL',
-                sentiment: 'NEUTRAL',
-                impactPct: 0,
-                imageUrl: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=800&q=80',
-                summary: 'Traders can now acquire strictly capped Limited Edition collector stocks, Commentators stocks, and IPL Franchise equities using ST.',
-                timestamp: '1 hour ago',
-                status: 'PUBLISHED'
-            },
-            {
-                id: 'news-3',
-                headline: 'Jasprit Bumrah Delivers Triple-Wicket New Ball Spell in Test Thriller',
-                category: 'Market Alert',
-                ticker: 'JB93',
-                sentiment: 'BULLISH',
-                impactPct: 4.8,
-                imageUrl: 'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?auto=format&fit=crop&w=800&q=80',
-                summary: 'Exchange governors revise JB93 valuation upward following a decisive opening burst that dismantled the top order.',
-                timestamp: '3 hours ago',
-                status: 'PUBLISHED'
-            }
-        ];
+        const DEFAULT_NEWS = [];
 
-        const INSTITUTIONAL_PEERS = [
-            { handle: 'MumbaiBulls_HQ', topPick: 'VK18', holdingsST: 19450.00, cashST: 4820.00 },
-            { handle: 'EdenGardensCap', topPick: 'MSD07G', holdingsST: 16800.00, cashST: 5110.00 },
-            { handle: 'MelbourneApex', topPick: 'JB93', holdingsST: 14920.00, cashST: 3900.00 },
-            { handle: 'LordsSovereign', topPick: 'SRT100', holdingsST: 12640.00, cashST: 4100.00 },
-            { handle: 'WankhedeAlpha', topPick: 'RS45', holdingsST: 11250.00, cashST: 2950.00 },
-            { handle: 'ChinnaswamyVentures', topPick: 'RCBBOLD', holdingsST: 9840.00, cashST: 3420.00 },
-            { handle: 'ChepaukKingsFund', topPick: 'CSK5X', holdingsST: 8790.00, cashST: 4120.00 },
-            { handle: 'SydneySixersDesk', topPick: 'PC30', holdingsST: 7650.00, cashST: 3180.00 },
-            { handle: 'OvalBroadcastLP', topPick: 'HBVOX', holdingsST: 6420.00, cashST: 2890.00 }
-        ];
+        const INSTITUTIONAL_PEERS = [];
 
         let state = {
             theme: 'dark',
@@ -2477,7 +2169,7 @@
             cashST: 10000.00,
             initialCashST: 10000.00,
             selectedRoleFilter: 'ALL',
-            selectedStockId: 'vk18',
+            selectedStockId: '',
             activeCustomSectionId: 'sec_ipl',
             orderSide: 'BUY',
             heroBannerUrl: 'WhatsApp Image 2026-10-30 at 9.47.59 AM.jpeg',
@@ -2485,15 +2177,7 @@
             brandEmoji: '',
             activePortfolioSubTab: 'holdings',
             activeAdminWorkspaceTab: 'stocks',
-            userCollections: [
-                {
-                    id: 'col_default_1',
-                    title: 'My World Cup Icons Shelf',
-                    icon: '🏆',
-                    color: '#D6AA72',
-                    stockIds: ['vk18', 'le_msd07', 'com_rs']
-                }
-            ],
+            userCollections: [],
             mainMarketConfig: {
                 navName: 'Stock Market',
                 navIcon: '📈',
@@ -2526,17 +2210,25 @@
             },
             customSections: JSON.parse(JSON.stringify(DEFAULT_CUSTOM_SECTIONS)),
             memberTags: JSON.parse(JSON.stringify(DEFAULT_MEMBER_TAGS)),
-            players: JSON.parse(JSON.stringify(DEFAULT_PLAYERS)),
+            players: [],
             holdings: {},
             tradeHistory: [],
             registeredUsers: [],
-            news: JSON.parse(JSON.stringify(DEFAULT_NEWS))
+            deletedHandles: [],
+            news: []
         };
 
         // =========================================================
         // INITIALIZATION & STORAGE
         // =========================================================
         function initApp() {
+            // Remove older demo storage keys so no stale demo users or demo stocks remain
+            try {
+                localStorage.removeItem('ICE_EXCHANGE_STATE_V7_ULTIMATE');
+                localStorage.removeItem('ICE_EXCHANGE_STATE_V6');
+                localStorage.removeItem('ICE_EXCHANGE_STATE_V5');
+            } catch (e) {}
+
             loadStateFromStorage();
             if (typeof state.hasEnteredFloor !== 'boolean') {
                 state.hasEnteredFloor = Boolean(state.isAuthenticated);
@@ -2573,27 +2265,18 @@
                 if (!raw) return;
                 const parsed = JSON.parse(raw);
                 state = Object.assign({}, state, parsed);
-                if (!Array.isArray(state.players) || state.players.length === 0) {
-                    state.players = JSON.parse(JSON.stringify(DEFAULT_PLAYERS));
+                if (!Array.isArray(state.players)) {
+                    state.players = [];
                 }
                 state.players.forEach(p => {
                     if (!p.section) p.section = 'MAIN';
                 });
-                if (!state.players.some(p => p.section === 'LIMITED')) {
-                    DEFAULT_PLAYERS.filter(p => p.section === 'LIMITED').forEach(dp => state.players.push(JSON.parse(JSON.stringify(dp))));
+                if (!Array.isArray(state.registeredUsers)) {
+                    state.registeredUsers = [];
                 }
-                if (!state.players.some(p => p.section === 'COMMENTATORS')) {
-                    DEFAULT_PLAYERS.filter(p => p.section === 'COMMENTATORS').forEach(dp => state.players.push(JSON.parse(JSON.stringify(dp))));
+                if (!Array.isArray(state.deletedHandles)) {
+                    state.deletedHandles = [];
                 }
-                // Ensure default commentators have audioClip presets attached
-                state.players.forEach(p => {
-                    if (p.section === 'COMMENTATORS' && !p.audioClip) {
-                        if (p.ticker === 'TRACER') p.audioClip = 'PRESET_DHONI';
-                        else if (p.ticker === 'BISH99') p.audioClip = 'PRESET_REMEMBER';
-                        else if (p.ticker === 'HBVOX') p.audioClip = 'PRESET_HARSHA';
-                        else p.audioClip = 'PRESET_KOHLI';
-                    }
-                });
                 if (!state.limitedConfig) state.limitedConfig = {};
                 if (!state.limitedConfig.navName) state.limitedConfig.navName = 'Limited Edition';
                 if (!state.limitedConfig.navIcon) state.limitedConfig.navIcon = '💎';
@@ -2617,15 +2300,7 @@
                 if (typeof state.commentatorsConfig.deleted !== 'boolean') state.commentatorsConfig.deleted = false;
 
                 if (!Array.isArray(state.userCollections)) {
-                    state.userCollections = [
-                        {
-                            id: 'col_default_1',
-                            title: 'My World Cup Icons Shelf',
-                            icon: '🏆',
-                            color: '#D6AA72',
-                            stockIds: ['vk18', 'le_msd07', 'com_rs']
-                        }
-                    ];
+                    state.userCollections = [];
                 }
                 if (!Array.isArray(state.customSections)) {
                     state.customSections = JSON.parse(JSON.stringify(DEFAULT_CUSTOM_SECTIONS));
@@ -2633,11 +2308,30 @@
                 if (!state.memberTags) {
                     state.memberTags = JSON.parse(JSON.stringify(DEFAULT_MEMBER_TAGS));
                 }
-                if (!Array.isArray(state.news) || state.news.length === 0) {
-                    state.news = JSON.parse(JSON.stringify(DEFAULT_NEWS));
+                if (!Array.isArray(state.news)) {
+                    state.news = [];
                 }
             } catch (err) {
                 console.error('Failed to load state:', err);
+            }
+        }
+
+        async function syncStateWithSupabase() {
+            if (!supabaseClient) return;
+            try {
+                await supabaseClient.from('ice_exchange_state').upsert({
+                    id: 'global_state',
+                    payload: {
+                        players: state.players,
+                        customSections: state.customSections,
+                        registeredUsers: state.registeredUsers,
+                        memberTags: state.memberTags,
+                        news: state.news,
+                        updatedAt: new Date().toISOString()
+                    }
+                });
+            } catch (e) {
+                // Silent fallback when table is not yet provisioned
             }
         }
 
@@ -2645,6 +2339,7 @@
             try {
                 syncActiveUserToRegistry();
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                syncStateWithSupabase();
             } catch (err) {
                 console.error('Failed to save state:', err);
             }
@@ -2682,6 +2377,11 @@
         function renderTickerTape() {
             const track = document.getElementById('liveTickerTrack');
             if (!track) return;
+            if (!state.players || state.players.length === 0) {
+                const msg = `<span class="inline-flex items-center gap-2 font-mono text-xs text-[#52D672]"><span class="w-2 h-2 rounded-full bg-[#52D672] animate-ping"></span>⚡ INTERNATIONAL CRICKET EXCHANGE ( ICE ) LIVE — OFFICIAL STOCKS WILL COME SOONER THAN EXPECTED! • 7% ST EXCHANGE CUT</span>`;
+                track.innerHTML = `${msg} <span class="text-[#9B72D6]/40 mx-8">•</span> ${msg}`;
+                return;
+            }
             const items = state.players.map(p => {
                 const pct = p.prevPrice > 0 ? ((p.price - p.prevPrice) / p.prevPrice) * 100 : 0;
                 const isUp = pct >= 0;
@@ -4108,43 +3808,61 @@
 
         function renderOrderExecutionDesk() {
             const player = state.players.find(p => p.id === state.selectedStockId) || state.players[0];
-            if (!player) return;
+            const avatarEl = document.getElementById('deskPlayerAvatar');
+            const tickerEl = document.getElementById('deskTicker');
+            const teamBadgeEl = document.getElementById('deskTeamBadge');
+            const nameEl = document.getElementById('deskPlayerName');
+            const priceEl = document.getElementById('deskPriceST');
+            const changeEl = document.getElementById('deskChangeBadge');
+            const supplyEl = document.getElementById('deskSupplyTag');
+            const ownedEl = document.getElementById('deskOwnedQty');
+            const execBtn = document.getElementById('executeOrderBtn');
+
+            if (!player) {
+                state.selectedStockId = '';
+                if (avatarEl) avatarEl.src = 'https://placehold.co/100x100/171522/D6AA72?text=ICE';
+                if (tickerEl) tickerEl.textContent = 'LIVE';
+                if (teamBadgeEl) teamBadgeEl.textContent = 'ICE EXCHANGE';
+                if (nameEl) nameEl.textContent = 'Stocks Coming Soon';
+                if (priceEl) priceEl.textContent = '0.00 ST';
+                if (changeEl) {
+                    changeEl.textContent = '0.0%';
+                    changeEl.className = 'font-mono text-xs font-bold text-[#52D672]';
+                }
+                if (supplyEl) supplyEl.textContent = 'Pool: 0 / 0';
+                if (ownedEl) ownedEl.textContent = '0';
+                const baseCostEl = document.getElementById('calcBaseCost');
+                const feeAmount = document.getElementById('calcFeeAmount');
+                const netValue = document.getElementById('calcNetTotalValue');
+                if (baseCostEl) baseCostEl.textContent = '0.00 ST';
+                if (feeAmount) feeAmount.textContent = '0.00 ST';
+                if (netValue) netValue.textContent = '0.00 ST';
+                if (execBtn) execBtn.textContent = 'Stocks will come sooner than expected!';
+                drawSelectedStockChart();
+                return;
+            }
             state.selectedStockId = player.id;
 
             const pct = player.prevPrice > 0 ? ((player.price - player.prevPrice) / player.prevPrice) * 100 : 0;
             const isUp = pct >= 0;
             const owned = state.holdings[player.id]?.qty || 0;
 
-            const avatarEl = document.getElementById('deskPlayerAvatar');
             if (avatarEl) avatarEl.src = player.avatar;
-
-            const tickerEl = document.getElementById('deskTicker');
             if (tickerEl) tickerEl.textContent = player.ticker;
-
-            const teamBadgeEl = document.getElementById('deskTeamBadge');
             if (teamBadgeEl) teamBadgeEl.textContent = `${player.team} • ${player.role}`;
-
-            const nameEl = document.getElementById('deskPlayerName');
             if (nameEl) nameEl.textContent = player.name;
-
-            const priceEl = document.getElementById('deskPriceST');
             if (priceEl) priceEl.textContent = `${formatNumber(player.price)} ST`;
 
-            const changeEl = document.getElementById('deskChangeBadge');
             if (changeEl) {
                 changeEl.textContent = `${isUp ? '+' : ''}${pct.toFixed(1)}%`;
                 changeEl.className = `font-mono text-xs font-bold ${isUp ? 'text-[#52D672]' : 'text-[#D6AA72]'}`;
             }
 
-            const supplyEl = document.getElementById('deskSupplyTag');
             if (supplyEl) supplyEl.textContent = `Pool: ${player.availableShares} / ${player.totalSupply}`;
-
-            const ownedEl = document.getElementById('deskOwnedQty');
             if (ownedEl) ownedEl.textContent = owned;
 
             const buyBtn = document.getElementById('orderTabBuy');
             const sellBtn = document.getElementById('orderTabSell');
-            const execBtn = document.getElementById('executeOrderBtn');
 
             if (state.orderSide === 'BUY') {
                 if (buyBtn) buyBtn.className = 'py-2 rounded-lg text-xs font-extrabold btn-ice-green';
@@ -4521,9 +4239,8 @@
             if (tagMemberSelect) {
                 const prevSelected = tagMemberSelect.value;
                 const allHandles = new Set();
-                allHandles.add(state.traderHandle);
+                if (state.traderHandle) allHandles.add(state.traderHandle);
                 (state.registeredUsers || []).forEach(u => allHandles.add(u.username));
-                INSTITUTIONAL_PEERS.forEach(p => allHandles.add(p.handle));
 
                 tagMemberSelect.innerHTML = Array.from(allHandles).map(h => {
                     const existingTag = getMemberTagObject(h);
@@ -4538,38 +4255,29 @@
             document.getElementById('adminUserCountLabel').textContent = users.length;
             const uList = document.getElementById('adminUsersListContainer');
             if (uList) {
-                const registeredHtml = users.map(u => `
-                    <div class="p-3 rounded-xl bg-white dark:bg-[#171522] border border-purple-500/35 flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex items-center flex-wrap gap-1.5">
-                            <span class="font-bold">${u.username}</span>
-                            ${renderMemberTagBadgeHtml(u.username)}
-                            <span class="font-mono text-[#D6AA72] ml-2">${formatNumber(u.cashST)} ST</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <button onclick="adminQuickSelectMemberForTag('${u.username}')" class="px-2.5 py-1 rounded border border-[#D6AA72] text-[#D6AA72] text-[10px]">🏷️ Tag</button>
-                            <button onclick="adminAdjustUserST('${u.username}', 1000)" class="px-2.5 py-1 rounded btn-ice-green text-[10px]">+1k ST</button>
-                            <button onclick="adminAdjustUserST('${u.username}', -1000)" class="px-2.5 py-1 rounded btn-ice-red text-[10px]">-1k ST</button>
-                        </div>
-                    </div>
-                `).join('');
-
-                const taggedPeersHtml = Object.keys(state.memberTags || {}).map(handle => {
-                    if (users.some(u => u.username.toLowerCase() === handle.toLowerCase())) return '';
+                const registeredHtml = users.map(u => {
+                    const userHoldVal = calculateUserHoldingsValuation(u);
                     return `
-                        <div class="p-3 rounded-xl bg-[#F7F5FA] dark:bg-[#0B0F17] border border-[#D6AA72]/30 flex flex-wrap items-center justify-between gap-2">
+                        <div class="p-3.5 rounded-xl bg-white dark:bg-[#171522] border border-purple-500/35 flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center flex-wrap gap-1.5">
-                                <span class="font-bold">${handle}</span>
-                                ${renderMemberTagBadgeHtml(handle)}
-                                <span class="text-[10px] font-mono text-slate-400 ml-1">(Leaderboard Profile)</span>
+                                <span class="font-bold text-sm">${u.username}</span>
+                                ${renderMemberTagBadgeHtml(u.username)}
+                                <span class="font-mono text-[#D6AA72] ml-2">Cash: ${formatNumber(u.cashST)} ST</span>
+                                <span class="font-mono text-[#52D672] ml-1">• Holdings: ${formatNumber(userHoldVal)} ST</span>
                             </div>
-                            <button onclick="adminQuickSelectMemberForTag('${handle}')" class="px-2.5 py-1 rounded border border-[#D6AA72] text-[#D6AA72] text-[10px]">
-                                ✏️ Edit Tag
-                            </button>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <button onclick="adminQuickSelectMemberForTag('${u.username}')" class="px-2.5 py-1 rounded border border-[#D6AA72] text-[#D6AA72] text-[10px] font-bold">🏷️ Tag</button>
+                                <button onclick="adminAdjustUserST('${u.username}', 1000)" class="px-2.5 py-1 rounded btn-ice-green text-[10px]">+1k ST</button>
+                                <button onclick="adminAdjustUserST('${u.username}', -1000)" class="px-2.5 py-1 rounded btn-ice-red text-[10px]">-1k ST</button>
+                                <button onclick="adminDeleteUser('${u.username}')" class="px-3 py-1 rounded bg-rose-500/20 border border-rose-500 hover:bg-rose-500 text-rose-300 hover:text-white font-bold text-[10px] transition">
+                                    🗑️ Delete User
+                                </button>
+                            </div>
                         </div>
                     `;
                 }).join('');
 
-                uList.innerHTML = (registeredHtml + taggedPeersHtml) || `<div class="p-4 text-center text-slate-400">No trader accounts registered yet.</div>`;
+                uList.innerHTML = registeredHtml || `<div class="p-6 text-center text-slate-400">No trader accounts registered yet. Zero demo users are loaded—only real registered users appear here and on the Leaderboard.</div>`;
             }
 
             // 5. Render Active Custom Market Sections List (Module 2)
@@ -4745,40 +4453,66 @@
             showToast('Top 10 Leaderboard refreshed!', 'success');
         }
 
-        function renderLeaderboardTab() {
-            const podium = document.getElementById('leaderboardPodiumGrid');
-            const tbody = document.getElementById('leaderboardTableBody');
-            if (!tbody || !podium) return;
+        function calculateUserHoldingsValuation(userObj) {
+            if (!userObj || !userObj.holdings) return 0;
+            let total = 0;
+            Object.keys(userObj.holdings).forEach(pid => {
+                const pos = userObj.holdings[pid];
+                const player = state.players.find(p => p.id === pid);
+                if (pos && pos.qty > 0 && player) {
+                    total += pos.qty * player.price;
+                }
+            });
+            return +total.toFixed(2);
+        }
 
-            const { total: activeHoldingsST } = calculateHoldingsValuation();
+        function getUserTopPickTicker(holdingsObj) {
             let topTicker = 'None';
             let maxVal = 0;
-            Object.keys(state.holdings || {}).forEach(pid => {
+            Object.keys(holdingsObj || {}).forEach(pid => {
                 const p = state.players.find(pl => pl.id === pid);
-                const val = (state.holdings[pid]?.qty || 0) * (p?.price || 0);
+                const val = (holdingsObj[pid]?.qty || 0) * (p?.price || 0);
                 if (val > maxVal && p) {
                     maxVal = val;
                     topTicker = p.ticker;
                 }
             });
+            return topTicker;
+        }
 
-            const rows = INSTITUTIONAL_PEERS.map(peer => ({
-                handle: peer.handle,
-                topPick: peer.topPick,
-                holdingsST: peer.holdingsST,
-                cashST: peer.cashST,
-                netWorthST: peer.holdingsST + peer.cashST,
-                isCurrentUser: false
-            }));
+        function renderLeaderboardTab() {
+            const podium = document.getElementById('leaderboardPodiumGrid');
+            const tbody = document.getElementById('leaderboardTableBody');
+            const adminColHeader = document.getElementById('leaderboardAdminActionHeader');
+            if (!tbody || !podium) return;
 
-            // Include Active Logged-In Trader
-            rows.push({
-                handle: `${state.traderHandle} (You)`,
-                topPick: topTicker,
-                holdingsST: activeHoldingsST,
-                cashST: state.cashST,
-                netWorthST: activeHoldingsST + state.cashST,
-                isCurrentUser: true
+            if (adminColHeader) {
+                adminColHeader.classList.toggle('hidden', !state.isAdmin);
+            }
+
+            syncActiveUserToRegistry();
+
+            const deletedSet = new Set((state.deletedHandles || []).map(h => h.toLowerCase()));
+            const rows = [];
+
+            // Build Leaderboard strictly from real registered users (Zero fake/demo users)
+            (state.registeredUsers || []).forEach(u => {
+                if (!u || !u.username) return;
+                if (deletedSet.has(u.username.toLowerCase())) return;
+                const isMe = !state.isAdmin && state.isAuthenticated && u.username.toLowerCase() === state.traderHandle.toLowerCase();
+                const holdingsVal = isMe ? calculateHoldingsValuation().total : calculateUserHoldingsValuation(u);
+                const cashVal = isMe ? Number(state.cashST || 0) : Number(u.cashST || 0);
+                const topPick = isMe ? getUserTopPickTicker(state.holdings) : getUserTopPickTicker(u.holdings);
+
+                rows.push({
+                    rawHandle: u.username,
+                    handle: isMe ? `${u.username} (You)` : u.username,
+                    topPick,
+                    holdingsST: holdingsVal,
+                    cashST: cashVal,
+                    netWorthST: +(holdingsVal + cashVal).toFixed(2),
+                    isCurrentUser: isMe
+                });
             });
 
             // Sort by Highest Stock Holdings Valuation (then Net Worth)
@@ -4787,7 +4521,18 @@
 
             const myRankIdx = rows.findIndex(r => r.isCurrentUser);
             const rankBadge = document.getElementById('kpiRankBadge');
-            if (rankBadge) rankBadge.textContent = `#${myRankIdx + 1}`;
+            if (rankBadge) rankBadge.textContent = myRankIdx !== -1 ? `#${myRankIdx + 1}` : (rows.length > 0 ? `#${rows.length}` : '—');
+
+            if (top10.length === 0) {
+                podium.innerHTML = `
+                    <div class="col-span-3 ice-card p-8 text-center space-y-2 border-2 border-[#9B72D6]/40">
+                        <div class="text-sm font-extrabold">No Registered Traders on the Leaderboard Yet</div>
+                        <p class="text-xs text-slate-400">All demo users have been removed. As soon as real users create an account and trade stocks, they will appear live here.</p>
+                    </div>
+                `;
+                tbody.innerHTML = `<tr><td colspan="${state.isAdmin ? 7 : 6}" class="py-8 text-center text-slate-400">Leaderboard is clean and ready for real traders.</td></tr>`;
+                return;
+            }
 
             // Render Top 3 Podium
             podium.innerHTML = top10.slice(0, 3).map((r, i) => {
@@ -4795,13 +4540,20 @@
                 const borderColors = ['border-[#D6AA72]', 'border-[#9B72D6]', 'border-[#52D672]'];
                 return `
                     <div class="ice-card p-5 border-2 ${borderColors[i]} flex flex-col justify-between">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-2">
                             <span class="font-mono text-xs font-extrabold px-2.5 py-0.5 rounded badge-ice-volt">${medals[i]}</span>
-                            <span class="font-mono text-xs px-2 py-0.5 rounded badge-ice-olive">Top Pick: ${r.topPick}</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-mono text-xs px-2 py-0.5 rounded badge-ice-olive">Top Pick: ${r.topPick}</span>
+                                ${state.isAdmin ? `
+                                    <button onclick="adminDeleteUser('${r.rawHandle}')" class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500 hover:bg-rose-500 text-rose-300 hover:text-white font-mono text-[10px] font-bold transition" title="Remove User from Leaderboard">
+                                        🗑️ Remove User
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
                         <h3 class="text-base font-extrabold mt-3 flex items-center flex-wrap gap-1">
                             <span>${r.handle}</span>
-                            ${renderMemberTagBadgeHtml(r.handle)}
+                            ${renderMemberTagBadgeHtml(r.rawHandle)}
                         </h3>
                         <div class="mt-2 pt-2 border-t border-[#9B72D6]/25 flex justify-between text-xs font-mono">
                             <span class="text-slate-500 dark:text-slate-400">Holdings Value:</span>
@@ -4817,12 +4569,19 @@
                     <td class="py-3 px-3 font-mono font-bold">#${idx + 1}</td>
                     <td class="py-3 px-3 font-bold">
                         <span>${r.handle}</span>
-                        ${renderMemberTagBadgeHtml(r.handle)}
+                        ${renderMemberTagBadgeHtml(r.rawHandle)}
                     </td>
                     <td class="py-3 px-3 font-mono"><span class="px-2 py-0.5 rounded badge-ice-volt text-[11px]">${r.topPick}</span></td>
                     <td class="py-3 px-3 font-mono font-bold text-[#52D672]">${formatNumber(r.holdingsST)} ST</td>
                     <td class="py-3 px-3 font-mono">${formatNumber(r.cashST)} ST</td>
                     <td class="py-3 px-3 font-mono font-extrabold text-right text-[#D6AA72]">${formatNumber(r.netWorthST)} ST</td>
+                    ${state.isAdmin ? `
+                        <td class="py-3 px-3 text-right">
+                            <button onclick="adminDeleteUser('${r.rawHandle}')" class="px-2.5 py-1 rounded bg-rose-500/20 border border-rose-500 hover:bg-rose-500 text-rose-300 hover:text-white font-bold text-[11px] transition">
+                                🗑️ Remove User
+                            </button>
+                        </td>
+                    ` : ''}
                 </tr>
             `).join('');
         }
@@ -4941,21 +4700,72 @@
         }
 
         function adminDeletePlayerStock(playerId) {
-            if (state.players.length <= 1) {
-                showToast('At least 1 player stock must remain listed on the exchange.', 'error');
-                return;
-            }
             const idx = state.players.findIndex(p => p.id === playerId);
             if (idx === -1) return;
             const removed = state.players[idx];
             state.players.splice(idx, 1);
             delete state.holdings[playerId];
             if (state.selectedStockId === playerId) {
-                state.selectedStockId = state.players[0].id;
+                state.selectedStockId = state.players[0] ? state.players[0].id : '';
             }
             saveStateToStorage();
             renderAllViews();
             showToast(`Permanently deleted ${removed.name} (${removed.ticker}) from exchange.`, 'info');
+        }
+
+        async function adminDeleteUser(username) {
+            if (!state.isAdmin || !username) return;
+            const cleanHandle = username.replace(' (You)', '').trim();
+            if (!cleanHandle) return;
+
+            // Remove from registeredUsers
+            state.registeredUsers = (state.registeredUsers || []).filter(
+                u => u.username.toLowerCase() !== cleanHandle.toLowerCase()
+            );
+
+            // Track deleted handles so they never reappear
+            state.deletedHandles = state.deletedHandles || [];
+            if (!state.deletedHandles.some(h => h.toLowerCase() === cleanHandle.toLowerCase())) {
+                state.deletedHandles.push(cleanHandle);
+            }
+
+            // Remove any custom member tag for this user
+            if (state.memberTags) {
+                Object.keys(state.memberTags).forEach(k => {
+                    if (k.toLowerCase() === cleanHandle.toLowerCase()) {
+                        delete state.memberTags[k];
+                    }
+                });
+            }
+
+            // Also delete from Supabase users table if present
+            if (supabaseClient) {
+                try {
+                    await supabaseClient.from('users').delete().ilike('username', cleanHandle);
+                    await supabaseClient.from('leaderboard').delete().ilike('username', cleanHandle);
+                } catch (e) {}
+            }
+
+            saveStateToStorage();
+            renderAllViews();
+            showToast(`Deleted user "${cleanHandle}" from Leaderboard & User Directory.`, 'info');
+        }
+
+        function adminPurgeAllExchangeData() {
+            if (!state.isAdmin) return;
+            state.players = [];
+            state.registeredUsers = [];
+            state.deletedHandles = [];
+            state.holdings = {};
+            state.tradeHistory = [];
+            state.userCollections = [];
+            state.news = [];
+            state.selectedStockId = '';
+            state.deviceAccountCreated = false;
+            state.memberTags = { 'Exchange_Admin': { text: 'GOVERNOR', color: '#D6AA72' } };
+            saveStateToStorage();
+            renderAllViews();
+            showToast('Purged all stocks, users, and leaderboard entries! Exchange is 100% clean.', 'success');
         }
 
         function handleIpoImageFile(event) {
@@ -5799,10 +5609,10 @@
         window.adminRestoreDefaultCustomSections = adminRestoreDefaultCustomSections;
         window.adminApplyVisualPlayerPhotoUrl = adminApplyVisualPlayerPhotoUrl;
         window.handleAdminVisPlayerFile = handleAdminVisPlayerFile;
+        window.adminDeleteUser = adminDeleteUser;
+        window.adminPurgeAllExchangeData = adminPurgeAllExchangeData;
 
         window.addEventListener('DOMContentLoaded', initApp);
-   const supabaseUrl = 'https://pzbhunfqymwktkzkzdtf.supabase.co';
-const supabaseKey = 'sb_publishable_2RvTxyGo_EAbaXskK3uwFQ_H9l9iiXD';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey); </script>
+    </script>
 </body>
 </html>
