@@ -2348,13 +2348,21 @@
 async function pushMarketToCloud() {
     if (!supabaseClient) return;
     try {
+        const marketPayload = {
+            stocks: state.stocks || [],
+            limitedStocks: state.limitedStocks || [],
+            commentatorStocks: state.commentatorStocks || [],
+            customStocks: state.customStocks || [],
+            startingCash: state.startingCash || 10000
+        };
         await supabaseClient.from('exchange_global_state').upsert({
             id: 1,
-            stocks: state.stocks || [],
+            stocks: marketPayload,
             custom_sections: state.customSections || [],
             news: state.news || [],
             updated_at: new Date().toISOString()
         });
+        console.log('Cloud sync complete!');
     } catch (err) {
         console.warn('Cloud push error:', err);
     }
@@ -2363,30 +2371,63 @@ async function pushMarketToCloud() {
 async function pullMarketFromCloud() {
     if (!supabaseClient) return;
     try {
-        const { data: globalData } = await supabaseClient
+        const { data: globalData, error } = await supabaseClient
             .from('exchange_global_state')
             .select('*')
             .eq('id', 1)
-            .single();
+            .maybeSingle();
 
-        if (globalData) {
-            let changed = false;
-            if (Array.isArray(globalData.stocks) && globalData.stocks.length > 0) {
-                state.stocks = globalData.stocks;
-                changed = true;
+        // If the cloud table is empty, automatically upload this device's stocks to the cloud!
+        if (!globalData) {
+            if ((state.stocks && state.stocks.length > 0) || (state.news && state.news.length > 0)) {
+                await pushMarketToCloud();
             }
-            if (Array.isArray(globalData.custom_sections) && globalData.custom_sections.length > 0) {
-                state.customSections = globalData.custom_sections;
-                changed = true;
+            return;
+        }
+
+        let changed = false;
+        if (globalData.stocks) {
+            // Handle both array format and full bundle format
+            if (Array.isArray(globalData.stocks)) {
+                if (globalData.stocks.length > 0) {
+                    state.stocks = globalData.stocks;
+                    changed = true;
+                } else if (state.stocks && state.stocks.length > 0) {
+                    // Cloud is empty but local device has stocks -> push local to cloud!
+                    await pushMarketToCloud();
+                    return;
+                }
+            } else if (typeof globalData.stocks === 'object') {
+                const b = globalData.stocks;
+                const cloudHasData = (b.stocks && b.stocks.length > 0) || (b.limitedStocks && b.limitedStocks.length > 0) || (b.commentatorStocks && b.commentatorStocks.length > 0);
+                const localHasData = (state.stocks && state.stocks.length > 0) || (state.limitedStocks && state.limitedStocks.length > 0) || (state.commentatorStocks && state.commentatorStocks.length > 0);
+                
+                if (cloudHasData) {
+                    state.stocks = b.stocks || [];
+                    state.limitedStocks = b.limitedStocks || [];
+                    state.commentatorStocks = b.commentatorStocks || [];
+                    state.customStocks = b.customStocks || [];
+                    if (b.startingCash) state.startingCash = b.startingCash;
+                    changed = true;
+                } else if (localHasData) {
+                    await pushMarketToCloud();
+                    return;
+                }
             }
-            if (Array.isArray(globalData.news) && globalData.news.length > 0) {
-                state.news = globalData.news;
-                changed = true;
-            }
-            if (changed) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-                if (typeof renderAllViews === 'function') renderAllViews();
-            }
+        }
+
+        if (Array.isArray(globalData.custom_sections) && globalData.custom_sections.length > 0) {
+            state.customSections = globalData.custom_sections;
+            changed = true;
+        }
+        if (Array.isArray(globalData.news) && globalData.news.length > 0) {
+            state.news = globalData.news;
+            changed = true;
+        }
+
+        if (changed) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            if (typeof renderAllViews === 'function') renderAllViews();
         }
     } catch (err) {
         console.warn('Cloud pull error:', err);
