@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>International Cricket Exchange (ICE) — Live Cricket Stock Market</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        html.dark body {
+            background-color: #050B14;
+            color: #F4F2F8;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-mono-num { font-family: 'JetBrains Mono', monospace; }
+        .glass-card {
+            background: rgba(14, 22, 36, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(214, 170, 114, 0.2);
+        }
+        .gold-gradient { background: linear-gradient(135deg, #E5BC82 0%, #B88646 100%); }
+        .purple-gradient { background: linear-gradient(135deg, #9B72D6 0%, #6E44B2 100%); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .ticker-wrap { overflow: hidden; white-space: nowrap; }
+        .ticker-move { display: inline-block; animation: ticker 26s linear infinite; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-[#D6AA72] selection:text-slate-950">
+
+    <!-- BUILT-IN VECTOR LOGO (Batter + Red/Green Candlesticks + Golden Rising Arrow) -->
+    <svg class="hidden" aria-hidden="true">
+        <symbol id="ice-official-logo" viewBox="0 0 200 200">
+            <rect width="200" height="200" rx="36" fill="#050B14"/>
+            <line x1="42" y1="108" x2="42" y2="148" stroke="#E04F3E" stroke-width="3.5" stroke-linecap="round"/>
+            <rect x="35" y="116" width="14" height="24" rx="2" fill="#E04F3E"/>
+            <line x1="62" y1="84" x2="62" y2="142" stroke="#18A957" stroke-width="3.5" stroke-linecap="round"/>
+            <rect x="55" y="94" width="14" height="38" rx="2" fill="#18A957"/>
+            <line x1="80" y1="102" x2="80" y2="144" stroke="#E04F3E" stroke-width="3.5" stroke-linecap="round"/>
+            <rect x="74" y="112" width="12" height="22" rx="2" fill="#E04F3E"/>
+            <line x1="126" y1="80" x2="126" y2="126" stroke="#18A957" stroke-width="3.5" stroke-linecap="round"/>
+            <rect x="119" y="90" width="14" height="30" rx="2" fill="#18A957"/>
+            <line x1="145" y1="68" x2="145" y2="112" stroke="#E04F3E" stroke-width="3.5" stroke-linecap="round"/>
+            <rect x="138" y="76" width="14" height="22" rx="2" fill="#E04F3E"/>
+            <line x1="164" y1="48" x2="164" y2="104" stroke="#18A957" stroke-width="3.5" stroke-linecap="round"/>
+            <rect x="157" y="58" width="14" height="36" rx="2" fill="#18A957"/>
+            <path d="M118 60 L152 24 L161 31 L126 68 Z" fill="#F5EFE6"/>
+            <circle cx="84" cy="74" r="12" fill="#F5EFE6"/>
+            <path d="M75 90 C72 104 80 124 86 136 L112 128 C108 112 106 98 116 84 L125 68 L114 62 L98 82 Z" fill="#F5EFE6"/>
+            <path d="M28 134 C22 168 105 152 164 95" fill="none" stroke="#D6AA72" stroke-width="8" stroke-linecap="round"/>
+            <polygon points="175,84 152,90 168,107" fill="#D6AA72"/>
+        </symbol>
+    </svg>
+
+    <!-- LIVE NEWS BAR -->
+    <div class="bg-[#0B1220] border-b border-[#D6AA72]/20 py-1.5 px-3 text-[11px] flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded bg-[#D6AA72]/20 border border-[#D6AA72]/40 text-[#E5BC82] font-bold uppercase tracking-wider shrink-0">LIVE</span>
+        <div class="ticker-wrap flex-1">
+            <div id="liveNewsTicker" class="ticker-move text-gray-300 font-medium">
+                Welcome to the International Cricket Exchange (ICE) • 7% ST Transaction Fee active on all orders • Real-time cloud sync enabled!
+            </div>
+        </div>
+        <span id="cloudSyncBadge" class="text-[10px] text-emerald-400 font-mono-num shrink-0">● Ready</span>
+    </div>
+
+    <!-- LOGIN / REGISTER GATE -->
+    <div id="authGateView" class="flex-1 flex items-center justify-center p-4">
+        <div class="glass-card rounded-2xl p-6 sm:p-8 w-full max-w-md shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="relative w-24 h-24 mx-auto mb-3 rounded-2xl overflow-hidden border-2 border-[#D6AA72]/50 shadow-xl bg-[#050B14] flex items-center justify-center">
+                    <img src="ice%20exchange%20logo.jpeg" alt="ICE Logo" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <svg class="w-full h-full hidden"><use href="#ice-official-logo"></use></svg>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white">International Cricket Exchange</h1>
+                <p class="text-xs sm:text-sm text-gray-400 mt-1">Live Cricket Player Stock Market & Trading Floor</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 p-1 bg-[#050B14] rounded-xl mb-5 border border-white/10">
+                <button type="button" id="tabSignInBtn" onclick="switchAuthTab('signin')" class="py-2.5 rounded-lg text-xs sm:text-sm font-bold gold-gradient text-slate-950 transition">
+                    Sign In
+                </button>
+                <button type="button" id="tabSignUpBtn" onclick="switchAuthTab('signup')" class="py-2.5 rounded-lg text-xs sm:text-sm font-bold text-gray-400 hover:text-white transition">
+                    Create Account
+                </button>
+            </div>
+
+            <!-- SIGN IN FORM -->
+            <form id="signInForm" onsubmit="handleGateSignIn(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Trader Username</label>
+                    <input id="loginUsernameInput" type="text" required placeholder="Username (or admin)" class="w-full px-4 py-3 rounded-xl bg-[#050B14] border border-white/15 text-white text-sm focus:outline-none focus:border-[#D6AA72]">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Password</label>
+                    <input id="loginPasswordInput" type="password" required placeholder="Enter password" class="w-full px-4 py-3 rounded-xl bg-[#050B14] border border-white/15 text-white text-sm focus:outline-none focus:border-[#D6AA72]">
+                </div>
+                <p id="gateSignInError" class="hidden text-xs text-rose-300 font-semibold bg-rose-500/15 border border-rose-500/30 rounded-lg p-3"></p>
+                <button type="submit" id="signInSubmitBtn" class="w-full py-3.5 rounded-xl gold-gradient text-slate-950 font-extrabold text-sm shadow-lg active:scale-[0.99] transition">
+                    Enter Trading Floor
+                </button>
+            </form>
+
+            <!-- SIGN UP FORM -->
+            <form id="signUpForm" onsubmit="handleGateSignUp(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Choose Trader Handle</label>
+                    <input id="regUsernameInput" type="text" required placeholder="e.g., ViratFan18" class="w-full px-4 py-3 rounded-xl bg-[#050B14] border border-white/15 text-white text-sm focus:outline-none focus:border-[#D6AA72]">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Create Password</label>
+                    <input id="regPasswordInput" type="password" required placeholder="Minimum 4 characters" class="w-full px-4 py-3 rounded-xl bg-[#050B14] border border-white/15 text-white text-sm focus:outline-none focus:border-[#D6AA72]">
+                </div>
+                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200">
+                    🎁 New traders start with <span id="signupStartingSTDisplay" class="font-bold font-mono-num">10,000 ST</span> virtual capital!
+                </div>
+                <p id="gateSignUpError" class="hidden text-xs text-rose-300 font-semibold bg-rose-500/15 border border-rose-500/30 rounded-lg p-3"></p>
+                <button type="submit" class="w-full py-3.5 rounded-xl purple-gradient text-white font-extrabold text-sm shadow-lg active:scale-[0.99] transition">
+                    Register & Claim Starting ST
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN TRADING FLOOR -->
+    <div id="mainAppView" class="hidden flex-1 flex flex-col">
+        <header class="glass-card sticky top-0 z-30 border-b border-white/10 px-3 sm:px-6 py-2.5">
+            <div class="max-w-7xl mx-auto flex flex-col gap-2.5">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-10 h-10 rounded-xl overflow-hidden border border-[#D6AA72]/50 bg-[#050B14] shrink-0 flex items-center justify-center">
+                            <img src="ice%20exchange%20logo.jpeg" alt="ICE" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <svg class="w-full h-full hidden"><use href="#ice-official-logo"></use></svg>
+                        </div>
+                        <div class="truncate">
+                            <div class="flex items-center gap-1.5">
+                                <h2 class="font-extrabold text-sm sm:text-base text-white truncate">ICE Exchange</h2>
+                                <span id="activeUserBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-[#D6AA72]/20 border border-[#D6AA72]/40 text-[#E5BC82] font-bold">@Trader</span>
+                            </div>
+                            <p class="text-[11px] text-gray-400 hidden sm:block">7% ST Fee • Live Multi-Device Sync</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" onclick="pullMarketFromCloud(true)" class="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-200">
+                            🔄 Sync
+                        </button>
+                        <button type="button" onclick="handleLogout()" class="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-xs font-bold text-rose-300">
+                            Exit
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-[#050B14] border border-white/10 rounded-xl px-2.5 py-1.5 text-center sm:text-left">
+                        <span class="text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-400 block">Cash ST</span>
+                        <span id="headerCashST" class="font-mono-num font-bold text-emerald-400 text-xs sm:text-sm truncate block">10,000.00</span>
+                    </div>
+                    <div class="bg-[#050B14] border border-white/10 rounded-xl px-2.5 py-1.5 text-center sm:text-left">
+                        <span class="text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-400 block">Holdings</span>
+                        <span id="headerPortfolioST" class="font-mono-num font-bold text-[#E5BC82] text-xs sm:text-sm truncate block">0.00</span>
+                    </div>
+                    <div class="bg-[#050B14] border border-[#D6AA72]/30 rounded-xl px-2.5 py-1.5 text-center sm:text-left">
+                        <span class="text-[9px] sm:text-[10px] uppercase tracking-wider text-[#E5BC82] block">Net Worth</span>
+                        <span id="headerNetWorthST" class="font-mono-num font-bold text-white text-xs sm:text-sm truncate block">10,000.00</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1" id="mainNavTabs"></div>
+            </div>
+        </header>
+
+        <main class="max-w-7xl w-full mx-auto flex-1 p-3 sm:p-6">
+            <section id="tabContent-market" class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 id="marketSectionTitle" class="text-lg sm:text-2xl font-extrabold text-white">🏏 Main Player Exchange</h3>
+                        <p id="marketSectionSub" class="text-xs sm:text-sm text-gray-400">Buy and sell shares of cricket stars using virtual ST.</p>
+                    </div>
+                    <input id="stockSearchInput" oninput="renderMarketGrid()" type="text" placeholder="🔍 Search player or ticker..." class="w-full sm:w-64 px-3.5 py-2 rounded-xl bg-[#0E1624] border border-white/15 text-sm text-white focus:outline-none focus:border-[#D6AA72]">
+                </div>
+                <div id="marketStocksGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </section>
+
+            <section id="tabContent-portfolio" class="hidden space-y-4">
+                <div>
+                    <h3 class="text-lg sm:text-2xl font-extrabold text-white">💼 My Active Portfolio</h3>
+                    <p class="text-xs sm:text-sm text-gray-400">Manage your player holdings and sell shares back to the floor.</p>
+                </div>
+                <div id="portfolioHoldingsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </section>
+
+            <section id="tabContent-leaderboard" class="hidden space-y-4">
+                <div>
+                    <h3 class="text-lg sm:text-2xl font-extrabold text-white">🏆 Global Rich List & Leaderboard</h3>
+                    <p class="text-xs sm:text-sm text-gray-400">Live rankings by Total Net Worth (Available Cash + Portfolio Holdings).</p>
+                </div>
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[480px]">
+                            <thead>
+                                <tr class="border-b border-white/10 text-[11px] uppercase text-gray-400 bg-[#050B14]/70">
+                                    <th class="py-3 px-3.5">Rank</th>
+                                    <th class="py-3 px-3.5">Trader</th>
+                                    <th class="py-3 px-3.5">Cash ST</th>
+                                    <th class="py-3 px-3.5">Portfolio</th>
+                                    <th class="py-3 px-3.5">Net Worth</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboardTableBody" class="divide-y divide-white/5 text-xs sm:text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tabContent-news" class="hidden space-y-4">
+                <div>
+                    <h3 class="text-lg sm:text-2xl font-extrabold text-white">📰 Cricket Market News Wire</h3>
+                    <p class="text-xs sm:text-sm text-gray-400">Official exchange announcements and match performance updates.</p>
+                </div>
+                <div id="newsFeedList" class="space-y-3"></div>
+            </section>
+
+            <section id="tabContent-admin" class="hidden space-y-6">
+                <div class="glass-card rounded-2xl p-4 sm:p-6 border-2 border-[#D6AA72]/40">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <span class="text-[11px] font-bold uppercase tracking-widest text-[#E5BC82]">Admin Control Floor</span>
+                            <h3 class="text-xl font-extrabold text-white">⚡ Exchange Command Center</h3>
+                            <p class="text-xs text-gray-400">Every stock, price, news item, and ST balance syncs across all devices.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="pushMarketToCloud(true)" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl gold-gradient text-slate-950 font-extrabold text-xs shadow-lg">
+                                ☁️ Force Push to All Devices
+                            </button>
+                            <button type="button" onclick="pullMarketFromCloud(true)" class="px-3.5 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs">
+                                🔄 Pull Cloud
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
+                        <h4 class="text-base font-bold text-white">💰 Default Starting ST for New Users</h4>
+                        <div class="flex gap-2">
+                            <input id="adminStartingSTInput" type="number" min="100" step="100" class="flex-1 px-3.5 py-2 rounded-xl bg-[#050B14] border border-white/15 text-white font-mono-num text-sm" placeholder="10000">
+                            <button type="button" onclick="adminUpdateStartingST()" class="px-4 py-2 rounded-xl purple-gradient text-white font-bold text-xs">
+                                Save ST
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
+                        <h4 class="text-base font-bold text-white">🗂️ Custom Trading Sections</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input id="newSecName" type="text" placeholder="Name (e.g. IPL)" class="px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                            <input id="newSecIcon" type="text" placeholder="Icon (e.g. 🏆)" class="px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                            <button type="button" onclick="adminAddCustomSection()" class="py-2 px-3 rounded-xl gold-gradient text-slate-950 font-extrabold text-xs">
+                                + Add Section
+                            </button>
+                        </div>
+                        <div id="adminCustomSectionsList" class="flex flex-wrap gap-2 pt-1"></div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+                    <h4 class="text-base font-bold text-white">📈 List New Stock / Player / Commentator</h4>
+                    <form onsubmit="adminCreateStock(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Player / Stock Name *</label>
+                            <input id="stkName" type="text" required placeholder="e.g., Virat Kohli" class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Ticker Symbol *</label>
+                            <input id="stkTicker" type="text" required placeholder="e.g., VK18" class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white uppercase">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Market Section *</label>
+                            <select id="stkCategory" class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white"></select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Initial Share Price (ST) *</label>
+                            <input id="stkPrice" type="number" step="0.01" min="1" required placeholder="e.g., 250" class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white font-mono-num">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Team / Role</label>
+                            <input id="stkRole" type="text" placeholder="e.g., India • Batter" class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Supply Cap (Blank = Unlimited)</label>
+                            <input id="stkSupply" type="number" min="1" placeholder="Optional" class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white font-mono-num">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Player Image URL (Optional)</label>
+                            <input id="stkImage" type="url" placeholder="https://..." class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Audio MP3 URL (Optional)</label>
+                            <input id="stkAudioUrl" type="url" placeholder="https://...mp3" class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Voice Quote (Spoken if no MP3)</label>
+                            <input id="stkQuote" type="text" placeholder="e.g., Magnificent shot for six!" class="w-full px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                        </div>
+                        <div class="sm:col-span-2 lg:col-span-3 flex justify-end pt-1">
+                            <button type="submit" class="w-full sm:w-auto px-6 py-2.5 rounded-xl gold-gradient text-slate-950 font-extrabold text-sm shadow-lg">
+                                + List Stock & Sync to All Devices
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
+                    <h4 class="text-base font-bold text-white">📊 Manage Listed Stocks & Prices</h4>
+                    <div id="adminStocksManagerList" class="space-y-2.5"></div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
+                    <h4 class="text-base font-bold text-white">📢 Broadcast Breaking Cricket News</h4>
+                    <form onsubmit="adminAddNews(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                        <input id="newsHeadlineInput" type="text" required placeholder="Headline..." class="sm:col-span-2 px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                        <select id="newsSentimentInput" class="px-3 py-2 rounded-xl bg-[#050B14] border border-white/15 text-sm text-white">
+                            <option value="BULLISH">🟢 BULLISH SURGE</option>
+                            <option value="BEARISH">🔴 BEARISH DROP</option>
+                            <option value="BREAKING">🟣 BREAKING UPDATE</option>
+                        </select>
+                        <button type="submit" class="py-2 px-4 rounded-xl purple-gradient text-white font-bold text-xs">
+                            Broadcast News
+                        </button>
+                    </form>
+                    <div id="adminNewsList" class="space-y-2 pt-2"></div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
+                    <h4 class="text-base font-bold text-white">👥 Manage Traders, Balances & Badges</h4>
+                    <div id="adminUsersManagerList" class="space-y-2.5"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ADSENSE FOOTER -->
+    <footer class="bg-[#03070E] border-t border-white/10 py-5 px-4 text-xs text-gray-400 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div>
+                <b class="text-white">International Cricket Exchange (ICE)</b> • 100% Virtual Fantasy Sports Stock Simulation. "ST" has zero monetary value.
+            </div>
+            <div class="flex items-center gap-4 font-semibold text-gray-300">
+                <button type="button" onclick="openLegalModal('privacy')" class="hover:text-[#E5BC82]">Privacy Policy</button>
+                <button type="button" onclick="openLegalModal('terms')" class="hover:text-[#E5BC82]">Terms of Service</button>
+                <button type="button" onclick="openLegalModal('about')" class="hover:text-[#E5BC82]">About & Contact</button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- LEGAL MODAL -->
+    <div id="legalModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-card rounded-2xl max-w-lg w-full p-5 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+                <h3 id="legalModalTitle" class="text-base font-extrabold text-white">Information</h3>
+                <button type="button" onclick="closeLegalModal()" class="text-gray-400 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div id="legalModalBody" class="text-xs sm:text-sm text-gray-300 space-y-3 leading-relaxed"></div>
+            <div class="pt-2 border-t border-white/10 text-right">
+                <button type="button" onclick="closeLegalModal()" class="px-4 py-1.5 rounded-xl gold-gradient text-slate-950 text-xs font-extrabold">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastBox" class="fixed bottom-4 right-4 left-4 sm:left-auto z-50 hidden px-4 py-3 rounded-xl font-bold text-xs shadow-2xl text-center sm:text-left"></div>
+
+    <script>
+        const STORAGE_KEY = 'ICE_EXCHANGE_STATE_V8_CLEAN_PROD';
+        const ADMIN_USERNAME = 'admin';
+        // One-way SHA-256 cryptographic hash of your admin secret (password is NEVER exposed in plain text)
+        const ADMIN_HASH_FALLBACK = 'e2667a8a6021e2b8cf7a6e17910bc4b0030250a0c4a38a7c739bf7518534b6d8';
+        const TRADE_FEE_RATE = 0.07;
+        const SUPABASE_URL = 'https://pzbhunfqymwktkzkzdtf.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_2RvTxyGo_EAbaXskK3uwFQ_H919iiXD';
+
+        let supabaseClient = null;
+        try {
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (err) {
+            console.warn('Supabase init warning:', err);
+        }
+
+        async function sha256Hex(text) {
+            try {
+                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) {
+                return '';
+            }
+        }
+
+        const DEFAULT_CUSTOM_SECTIONS = [{ id: 'sec_ipl', name: 'IPL Stars', icon: '🏆' }];
+        const DEFAULT_STOCKS = [
+            { id: 'stk_vk18', name: 'Virat Kohli', ticker: 'VK18', category: 'main', price: 340, prevPrice: 320, role: 'India • Batter', supply: null, image: '', audioUrl: '', quote: 'Shot of an emperor! Straight down the ground for four!' },
+            { id: 'stk_gp23', name: 'Glenn Phillips', ticker: 'GP23', category: 'main', price: 215, prevPrice: 195, role: 'New Zealand • All-Rounder', supply: null, image: '', audioUrl: '', quote: 'Unbelievable diving catch at point by Glenn Phillips!' },
+            { id: 'stk_sh04', name: 'Shai Hope', ticker: 'SHAI', category: 'main', price: 190, prevPrice: 180, role: 'West Indies • WK Batter', supply: null, image: '', audioUrl: '', quote: 'Effortless timing over extra cover from Shai Hope!' }
+        ];
+
+        let activeTab = 'market';
+        let activeMarketCategory = 'main';
+
+        let state = {
+            isAuthenticated: false,
+            hasEnteredFloor: false,
+            isAdmin: false,
+            traderHandle: '',
+            cashST: 10000,
+            startingST: 10000,
+            holdings: {},
+            stocks: DEFAULT_STOCKS,
+            customSections: DEFAULT_CUSTOM_SECTIONS,
+            news: [{ id: 'news-1', headline: 'ICE Trading Floor Live! 7% ST transaction fee active on all orders.', status: 'BREAKING', timestamp: new Date().toLocaleTimeString() }],
+            registeredUsers: [],
+            memberTags: {}
+        };
+
+        function loadStateFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    state = Object.assign({}, state, parsed);
+                    if (parsed.startingCash && !parsed.startingST) state.startingST = Number(parsed.startingCash) || 10000;
+                    if (!Array.isArray(state.stocks)) state.stocks = DEFAULT_STOCKS;
+                    if (!Array.isArray(state.customSections)) state.customSections = DEFAULT_CUSTOM_SECTIONS;
+                    if (!Array.isArray(state.news)) state.news = [];
+                    if (!Array.isArray(state.registeredUsers)) state.registeredUsers = [];
+                    if (!state.holdings || typeof state.holdings !== 'object') state.holdings = {};
+                }
+            } catch (e) {
+                console.warn('Local state load error:', e);
+            }
+        }
+
+        function syncActiveUserToRegistry() {
+            if (!state.isAuthenticated || state.isAdmin || !state.traderHandle) return;
+            if (!Array.isArray(state.registeredUsers)) state.registeredUsers = [];
+            const idx = state.registeredUsers.findIndex(u => u && u.username && u.username.toLowerCase() === state.traderHandle.toLowerCase());
+            if (idx !== -1) {
+                state.registeredUsers[idx].cashST = Number(state.cashST) || 0;
+                state.registeredUsers[idx].holdings = state.holdings || {};
+            }
+        }
+
+        function saveStateToStorage(skipCloud) {
+            try {
+                syncActiveUserToRegistry();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                if (!skipCloud) pushMarketToCloud(false);
+            } catch (e) {
+                console.error('Save state error:', e);
+            }
+        }
+
+        async function pushMarketToCloud(showAlert) {
+            if (!supabaseClient) return;
+            try {
+                syncActiveUserToRegistry();
+                const cloudBundle = {
+                    items: Array.isArray(state.stocks) ? state.stocks : [],
+                    startingST: Number(state.startingST) || 10000,
+                    registeredUsers: Array.isArray(state.registeredUsers) ? state.registeredUsers : [],
+                    memberTags: state.memberTags || {}
+                };
+                const { error } = await supabaseClient.from('exchange_global_state').upsert({
+                    id: 1,
+                    stocks: cloudBundle,
+                    custom_sections: Array.isArray(state.customSections) ? state.customSections : [],
+                    news: Array.isArray(state.news) ? state.news : [],
+                    updated_at: new Date().toISOString()
+                });
+                const badge = document.getElementById('cloudSyncBadge');
+                if (badge) badge.textContent = error ? '● Local Mode' : '● Cloud Synced';
+                if (showAlert) {
+                    if (error) showToast('Supabase Notice: ' + error.message, 'error');
+                    else showToast('All stocks, news, ST & leaderboard pushed to cloud!', 'success');
+                }
+            } catch (e) {
+                console.warn('Push exception:', e);
+            }
+        }
+
+        async function pullMarketFromCloud(showAlert) {
+            if (!supabaseClient) return;
+            try {
+                const { data: globalData, error } = await supabaseClient
+                    .from('exchange_global_state')
+                    .select('*')
+                    .eq('id', 1)
+                    .maybeSingle();
+
+                if (error) return;
+                if (!globalData || (Array.isArray(globalData.stocks) && globalData.stocks.length === 0)) {
+                    if (state.stocks && state.stocks.length > 0) await pushMarketToCloud(false);
+                    return;
+                }
+
+                if (globalData.stocks) {
+                    if (Array.isArray(globalData.stocks) && globalData.stocks.length > 0) {
+                        state.stocks = globalData.stocks;
+                    } else if (typeof globalData.stocks === 'object' && !Array.isArray(globalData.stocks)) {
+                        const b = globalData.stocks;
+                        if (Array.isArray(b.items) && b.items.length > 0) state.stocks = b.items;
+                        else if (state.stocks && state.stocks.length > 0) await pushMarketToCloud(false);
+                        if (b.startingST) state.startingST = Number(b.startingST) || 10000;
+                        if (Array.isArray(b.registeredUsers)) {
+                            const map = {};
+                            (state.registeredUsers || []).forEach(u => { if (u && u.username) map[u.username.toLowerCase()] = u; });
+                            b.registeredUsers.forEach(u => {
+                                if (u && u.username) {
+                                    const k = u.username.toLowerCase();
+                                    if (state.isAuthenticated && !state.isAdmin && state.traderHandle.toLowerCase() === k) {
+                                        u.cashST = state.cashST;
+                                        u.holdings = state.holdings;
+                                    }
+                                    map[k] = u;
+                                }
+                            });
+                            state.registeredUsers = Object.values(map);
+                        }
+                        if (b.memberTags && typeof b.memberTags === 'object') {
+                            state.memberTags = Object.assign({}, state.memberTags, b.memberTags);
+                        }
+                    }
+                }
+                if (Array.isArray(globalData.custom_sections) && globalData.custom_sections.length > 0) state.customSections = globalData.custom_sections;
+                if (Array.isArray(globalData.news) && globalData.news.length > 0) state.news = globalData.news;
+
+                if (state.isAuthenticated && !state.isAdmin && state.traderHandle) {
+                    const me = (state.registeredUsers || []).find(u => u && u.username && u.username.toLowerCase() === state.traderHandle.toLowerCase());
+                    if (me) {
+                        state.cashST = Number(me.cashST) ?? state.cashST;
+                        state.holdings = me.holdings || state.holdings;
+                    }
+                }
+                saveStateToStorage(true);
+                renderAllViews();
+                if (showAlert) showToast('Synced latest market data!', 'success');
+            } catch (e) {
+                console.warn('Pull exception:', e);
+            }
+        }
+
+        function switchAuthTab(mode) {
+            const signInForm = document.getElementById('signInForm');
+            const signUpForm = document.getElementById('signUpForm');
+            const tabSignInBtn = document.getElementById('tabSignInBtn');
+            const tabSignUpBtn = document.getElementById('tabSignUpBtn');
+            const startEl = document.getElementById('signupStartingSTDisplay');
+            if (startEl) startEl.textContent = Number(state.startingST || 10000).toLocaleString() + ' ST';
+
+            if (mode === 'signup') {
+                signInForm.classList.add('hidden');
+                signUpForm.classList.remove('hidden');
+                tabSignUpBtn.className = 'py-2.5 rounded-lg text-xs sm:text-sm font-bold gold-gradient text-slate-950 transition';
+                tabSignInBtn.className = 'py-2.5 rounded-lg text-xs sm:text-sm font-bold text-gray-400 hover:text-white transition';
+            } else {
+                signUpForm.classList.add('hidden');
+                signInForm.classList.remove('hidden');
+                tabSignInBtn.className = 'py-2.5 rounded-lg text-xs sm:text-sm font-bold gold-gradient text-slate-950 transition';
+                tabSignUpBtn.className = 'py-2.5 rounded-lg text-xs sm:text-sm font-bold text-gray-400 hover:text-white transition';
+            }
+        }
+
+        async function handleGateSignIn(event) {
+            event.preventDefault();
+            const username = document.getElementById('loginUsernameInput').value.trim();
+            const password = document.getElementById('loginPasswordInput').value.trim();
+            const errEl = document.getElementById('gateSignInError');
+            const btn = document.getElementById('signInSubmitBtn');
+            errEl.classList.add('hidden');
+
+            if (username.toLowerCase() === ADMIN_USERNAME) {
+                btn.textContent = 'Verifying Admin...';
+                btn.disabled = true;
+                let isValidAdmin = false;
+
+                // 1. Try Supabase RPC first
+                try {
+                    if (supabaseClient) {
+                        const { data, error } = await supabaseClient.rpc('verify_admin_secret', { input_secret: password });
+                        if (!error && data === true) isValidAdmin = true;
+                    }
+                } catch (e) {
+                    console.warn('Supabase RPC check fallback:', e);
+                }
+
+                // 2. Cryptographic SHA-256 verification fallback (works even if Supabase RPC permission isn't granted yet)
+                if (!isValidAdmin) {
+                    const enteredHash = await sha256Hex(password);
+                    if (enteredHash === ADMIN_HASH_FALLBACK) {
+                        isValidAdmin = true;
+                    }
+                }
+
+                btn.textContent = 'Enter Trading Floor';
+                btn.disabled = false;
+
+                if (isValidAdmin) {
+                    sessionStorage.setItem('ice_admin_token', 'verified');
+                    state.isAuthenticated = true;
+                    state.hasEnteredFloor = true;
+                    state.isAdmin = true;
+                    state.traderHandle = 'Exchange_Admin';
+                    saveStateToStorage(false);
+                    renderAuthGateOrMainApp();
+                    renderAllViews();
+                    switchMainTab('admin');
+                    showToast('Welcome Admin! Command Center Unlocked.', 'success');
+                    return;
+                } else {
+                    errEl.textContent = 'Invalid Admin Password.';
+                    errEl.classList.remove('hidden');
+                    return;
+                }
+            }
+
+            await pullMarketFromCloud(false);
+            const user = (state.registeredUsers || []).find(
+                u => u && u.username && u.username.toLowerCase() === username.toLowerCase() && u.password === password
+            );
+            if (!user) {
+                errEl.textContent = 'Invalid username or password. Tap "Create Account" above if you are new!';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            state.isAuthenticated = true;
+            state.hasEnteredFloor = true;
+            state.isAdmin = false;
+            state.traderHandle = user.username;
+            state.cashST = Number(user.cashST ?? state.startingST ?? 10000);
+            state.holdings = user.holdings || {};
+            saveStateToStorage(false);
+            renderAuthGateOrMainApp();
+            renderAllViews();
+            switchMainTab('market');
+            showToast('Welcome back, @' + user.username + '!', 'success');
+        }
+
+        async function handleGateSignUp(event) {
+            event.preventDefault();
+            const username = document.getElementById('regUsernameInput').value.trim();
+            const password = document.getElementById('regPasswordInput').value;
+            const errEl = document.getElementById('gateSignUpError');
+            errEl.classList.add('hidden');
+
+            if (username.toLowerCase() === ADMIN_USERNAME || username.toLowerCase() === 'exchange_admin') {
+                errEl.textContent = 'Reserved username. Please choose another handle.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            if (password.length < 4) {
+                errEl.textContent = 'Password must be at least 4 characters.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            await pullMarketFromCloud(false);
+            const exists = (state.registeredUsers || []).some(u => u && u.username && u.username.toLowerCase() === username.toLowerCase());
+            if (exists) {
+                errEl.textContent = 'Handle @' + username + ' is already registered. Please Sign In.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const startST = Number(state.startingST) || 10000;
+            const newUser = { username, password, cashST: startST, holdings: {}, createdAt: new Date().toISOString() };
+            state.registeredUsers.push(newUser);
+            state.isAuthenticated = true;
+            state.hasEnteredFloor = true;
+            state.isAdmin = false;
+            state.traderHandle = username;
+            state.cashST = startST;
+            state.holdings = {};
+
+            saveStateToStorage(false);
+            renderAuthGateOrMainApp();
+            renderAllViews();
+            switchMainTab('market');
+            showToast('Welcome @' + username + '! ' + startST.toLocaleString() + ' ST credited.', 'success');
+        }
+
+        function handleLogout() {
+            syncActiveUserToRegistry();
+            sessionStorage.removeItem('ice_admin_token');
+            state.isAuthenticated = false;
+            state.hasEnteredFloor = false;
+            state.isAdmin = false;
+            state.traderHandle = '';
+            saveStateToStorage(false);
+            renderAuthGateOrMainApp();
+        }
+
+        function renderAuthGateOrMainApp() {
+            const gate = document.getElementById('authGateView');
+            const app = document.getElementById('mainAppView');
+            if (state.isAuthenticated) {
+                gate.classList.add('hidden');
+                app.classList.remove('hidden');
+            } else {
+                app.classList.add('hidden');
+                gate.classList.remove('hidden');
+            }
+        }
+
+        function switchMainTab(tabId, categoryId) {
+            activeTab = tabId;
+            if (categoryId) activeMarketCategory = categoryId;
+            ['market', 'portfolio', 'leaderboard', 'news', 'admin'].forEach(t => {
+                const el = document.getElementById('tabContent-' + t);
+                if (el) {
+                    if (t === tabId) el.classList.remove('hidden');
+                    else el.classList.add('hidden');
+                }
+            });
+            renderNavTabs();
+            renderAllViews();
+        }
+
+        function renderNavTabs() {
+            const nav = document.getElementById('mainNavTabs');
+            if (!nav) return;
+            const cats = [
+                { id: 'main', label: '🏏 Main Market' },
+                { id: 'limited', label: '💎 Limited Vault' },
+                { id: 'commentator', label: '🎙️ Commentators' }
+            ];
+            (state.customSections || []).forEach(sec => cats.push({ id: sec.id, label: (sec.icon || '🏆') + ' ' + sec.name }));
+
+            let html = '';
+            cats.forEach(c => {
+                const active = (activeTab === 'market' && activeMarketCategory === c.id);
+                html += `<button type="button" onclick="switchMainTab('market', '${c.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${active ? 'gold-gradient text-slate-950 shadow' : 'bg-white/5 text-gray-300'}">${c.label}</button>`;
+            });
+
+            const tabs = [
+                { id: 'portfolio', label: '💼 Portfolio' },
+                { id: 'leaderboard', label: '🏆 Leaderboard' },
+                { id: 'news', label: '📰 News' }
+            ];
+            if (state.isAdmin) tabs.push({ id: 'admin', label: '⚡ Admin' });
+
+            tabs.forEach(t => {
+                const active = (activeTab === t.id);
+                html += `<button type="button" onclick="switchMainTab('${t.id}')" class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${active ? 'purple-gradient text-white shadow' : 'bg-white/5 text-gray-300'}">${t.label}</button>`;
+            });
+            nav.innerHTML = html;
+        }
+
+        function calculateUserPortfolioValue(holdingsObj) {
+            if (!holdingsObj || typeof holdingsObj !== 'object') return 0;
+            let sum = 0;
+            Object.keys(holdingsObj).forEach(id => {
+                const q = Number(holdingsObj[id]?.qty ?? holdingsObj[id] ?? 0);
+                if (q > 0) {
+                    const s = (state.stocks || []).find(x => x.id === id);
+                    if (s) sum += q * Number(s.price || 0);
+                }
+            });
+            return sum;
+        }
+
+        function renderHeaderSummary() {
+            const badge = document.getElementById('activeUserBadge');
+            if (badge) badge.textContent = state.isAdmin ? '⚡ ADMIN' : '@' + state.traderHandle;
+            const cash = Number(state.cashST) || 0;
+            const port = calculateUserPortfolioValue(state.holdings);
+            document.getElementById('headerCashST').textContent = cash.toFixed(2) + ' ST';
+            document.getElementById('headerPortfolioST').textContent = port.toFixed(2) + ' ST';
+            document.getElementById('headerNetWorthST').textContent = (cash + port).toFixed(2) + ' ST';
+        }
+
+        function playStockAudio(stockId) {
+            const s = (state.stocks || []).find(x => x.id === stockId);
+            if (!s) return;
+            if (s.audioUrl) {
+                const a = new Audio(s.audioUrl);
+                a.play().catch(() => showToast('Unable to play audio URL.', 'error'));
+                return;
+            }
+            if (s.quote && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(s.quote));
+                showToast('🎙️ "' + s.quote + '"', 'success');
+            }
+        }
+
+        function executeTrade(stockId, side) {
+            const stk = (state.stocks || []).find(s => s.id === stockId);
+            if (!stk) return;
+            const inp = document.getElementById('tradeQty-' + stockId);
+            const qty = Math.max(1, parseInt(inp ? inp.value : '1', 10) || 1);
+            const gross = qty * Number(stk.price);
+            const fee = gross * TRADE_FEE_RATE;
+
+            if (side === 'BUY') {
+                if (stk.supply !== null && stk.supply !== undefined && Number(stk.supply) < qty) {
+                    showToast('Only ' + stk.supply + ' shares left!', 'error');
+                    return;
+                }
+                const totalCost = gross + fee;
+                if (state.cashST < totalCost) {
+                    showToast('Need ' + totalCost.toFixed(2) + ' ST (incl. 7% fee).', 'error');
+                    return;
+                }
+                state.cashST -= totalCost;
+                const cur = Number(state.holdings[stockId]?.qty ?? state.holdings[stockId] ?? 0);
+                state.holdings[stockId] = { qty: cur + qty, lastBuyPrice: stk.price };
+                if (stk.supply !== null && stk.supply !== undefined) stk.supply = Math.max(0, Number(stk.supply) - qty);
+                stk.prevPrice = stk.price;
+                stk.price = Number((stk.price * (1 + Math.min(0.05, 0.005 * qty))).toFixed(2));
+                saveStateToStorage(false);
+                renderAllViews();
+                showToast(`Bought ${qty}x ${stk.ticker} for ${totalCost.toFixed(2)} ST`, 'success');
+            } else {
+                const cur = Number(state.holdings[stockId]?.qty ?? state.holdings[stockId] ?? 0);
+                if (cur < qty) {
+                    showToast('You only own ' + cur + ' shares!', 'error');
+                    return;
+                }
+                const payout = Math.max(0, gross - fee);
+                state.cashST += payout;
+                if (cur - qty <= 0) delete state.holdings[stockId];
+                else state.holdings[stockId] = { qty: cur - qty, lastBuyPrice: stk.price };
+                if (stk.supply !== null && stk.supply !== undefined) stk.supply = Number(stk.supply) + qty;
+                stk.prevPrice = stk.price;
+                stk.price = Number(Math.max(1, stk.price * (1 - Math.min(0.05, 0.005 * qty))).toFixed(2));
+                saveStateToStorage(false);
+                renderAllViews();
+                showToast(`Sold ${qty}x ${stk.ticker} for ${payout.toFixed(2)} ST`, 'success');
+            }
+        }
+
+        function renderMarketGrid() {
+            const grid = document.getElementById('marketStocksGrid');
+            if (!grid) return;
+            const q = (document.getElementById('stockSearchInput')?.value || '').trim().toLowerCase();
+            const list = (state.stocks || []).filter(s => {
+                const cat = s.category || 'main';
+                return cat === activeMarketCategory && (!q || s.name.toLowerCase().includes(q) || s.ticker.toLowerCase().includes(q));
+            });
+
+            if (list.length === 0) {
+                grid.innerHTML = `<div class="col-span-full glass-card rounded-2xl p-8 text-center text-gray-400 text-sm">No stocks listed in this section yet.</div>`;
+                return;
+            }
+
+            grid.innerHTML = list.map(stk => {
+                const price = Number(stk.price || 0);
+                const prev = Number(stk.prevPrice || price);
+                const diff = price - prev;
+                const pct = prev > 0 ? ((diff / prev) * 100).toFixed(1) : '0.0';
+                const up = diff >= 0;
+                const owned = Number(state.holdings[stk.id]?.qty ?? state.holdings[stk.id] ?? 0);
+
+                return `
+                <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-3 min-w-0">
+                                ${stk.image
+                                    ? `<img src="${stk.image}" alt="${stk.name}" class="w-11 h-11 rounded-xl object-cover border border-white/15 shrink-0">`
+                                    : `<div class="w-11 h-11 rounded-xl gold-gradient flex items-center justify-center font-extrabold text-xs text-slate-950 shrink-0">${stk.ticker}</div>`
+                                }
+                                <div class="truncate">
+                                    <h4 class="font-extrabold text-white text-sm sm:text-base truncate">${stk.name}</h4>
+                                    <p class="text-xs text-gray-400 truncate">${stk.ticker} • ${stk.role || 'Cricketer'}</p>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="font-mono-num font-extrabold text-base text-white">${price.toFixed(2)} ST</div>
+                                <div class="text-[11px] font-mono-num font-bold ${up ? 'text-emerald-400' : 'text-rose-400'}">${up ? '▲ +' : '▼ '}${pct}%</div>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex items-center justify-between text-xs text-gray-400 bg-[#050B14] px-3 py-1.5 rounded-xl">
+                            <span>Owned: <b class="text-white font-mono-num">${owned}</b></span>
+                            ${stk.supply !== null && stk.supply !== undefined ? `<span class="text-amber-300 font-bold">💎 Left: ${stk.supply}</span>` : `<span>7% Fee</span>`}
+                        </div>
+                        ${(stk.audioUrl || stk.quote) ? `
+                        <button type="button" onclick="playStockAudio('${stk.id}')" class="mt-2.5 w-full py-1.5 px-3 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-200 text-xs font-bold">
+                            🔊 Play Audio Clip
+                        </button>` : ''}
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-white/10 flex items-center gap-2">
+                        <input id="tradeQty-${stk.id}" type="number" min="1" value="1" class="w-14 px-2 py-2 rounded-xl bg-[#050B14] border border-white/15 text-center font-mono-num text-xs text-white">
+                        <button type="button" onclick="executeTrade('${stk.id}', 'BUY')" class="flex-1 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs">BUY</button>
+                        <button type="button" onclick="executeTrade('${stk.id}', 'SELL')" class="flex-1 py-2.5 rounded-xl bg-rose-500/25 border border-rose-500/40 text-rose-200 font-extrabold text-xs">SELL</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderPortfolio() {
+            const el = document.getElementById('portfolioHoldingsList');
+            if (!el) return;
+            const keys = Object.keys(state.holdings || {}).filter(k => Number(state.holdings[k]?.qty ?? state.holdings[k] ?? 0) > 0);
+            if (keys.length === 0) {
+                el.innerHTML = `<div class="col-span-full glass-card rounded-2xl p-8 text-center text-gray-400 text-sm">You do not own any shares yet.</div>`;
+                return;
+            }
+            el.innerHTML = keys.map(id => {
+                const s = (state.stocks || []).find(x => x.id === id);
+                if (!s) return '';
+                const q = Number(state.holdings[id]?.qty ?? state.holdings[id] ?? 0);
+                return `
+                <div class="glass-card rounded-2xl p-4 space-y-3">
+                    <div class="flex justify-between">
+                        <div>
+                            <h4 class="font-bold text-white">${s.name} (${s.ticker})</h4>
+                            <p class="text-xs text-gray-400">${q} shares @ ${Number(s.price).toFixed(2)} ST</p>
+                        </div>
+                        <div class="font-mono-num font-bold text-[#E5BC82]">${(q * Number(s.price)).toFixed(2)} ST</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <input id="tradeQty-${s.id}" type="number" min="1" max="${q}" value="1" class="w-16 px-2 py-1.5 rounded-xl bg-[#050B14] border border-white/15 text-center text-xs text-white">
+                        <button type="button" onclick="executeTrade('${s.id}', 'SELL')" class="flex-1 py-2 rounded-xl bg-rose-500 text-white font-bold text-xs">Sell (-7% Fee)</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderLeaderboard() {
+            const tbody = document.getElementById('leaderboardTableBody');
+            if (!tbody) return;
+            syncActiveUserToRegistry();
+            const rows = (state.registeredUsers || []).map(u => {
+                const c = Number(u.cashST) || 0;
+                const p = calculateUserPortfolioValue(u.holdings);
+                return { username: u.username, cash: c, port: p, net: c + p, tag: state.memberTags?.[u.username] };
+            }).sort((a, b) => b.net - a.net);
+
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-gray-400">No traders registered yet.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = rows.map((r, i) => `
+                <tr>
+                    <td class="py-3 px-3.5 font-mono-num font-bold text-white">#${i + 1}</td>
+                    <td class="py-3 px-3.5 font-bold text-white">@${r.username} ${r.tag ? `<span class="ml-1 px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]">${r.tag.text}</span>` : ''}</td>
+                    <td class="py-3 px-3.5 font-mono-num text-emerald-400">${r.cash.toFixed(2)}</td>
+                    <td class="py-3 px-3.5 font-mono-num text-[#E5BC82]">${r.port.toFixed(2)}</td>
+                    <td class="py-3 px-3.5 font-mono-num font-extrabold text-white">${r.net.toFixed(2)} ST</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderNews() {
+            const ticker = document.getElementById('liveNewsTicker');
+            const feed = document.getElementById('newsFeedList');
+            if (ticker && state.news && state.news.length > 0) {
+                ticker.textContent = state.news.map(n => `[${n.status}] ${n.headline}`).join('   •   ');
+            }
+            if (!feed) return;
+            feed.innerHTML = (state.news || []).map(n => `
+                <div class="glass-card rounded-2xl p-4 flex items-center justify-between gap-3">
+                    <div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">${n.status}</span>
+                        <h4 class="font-bold text-white text-sm mt-1">${n.headline}</h4>
+                    </div>
+                    <span class="text-[11px] text-gray-400 font-mono-num shrink-0">${n.timestamp || ''}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderAdminPanel() {
+            if (!state.isAdmin) return;
+            const stInp = document.getElementById('adminStartingSTInput');
+            if (stInp && document.activeElement !== stInp) stInp.value = state.startingST || 10000;
+
+            const catSel = document.getElementById('stkCategory');
+            if (catSel) {
+                let html = `<option value="main">🏏 Main Market</option><option value="limited">💎 Limited Vault</option><option value="commentator">🎙️ Commentators</option>`;
+                (state.customSections || []).forEach(s => { html += `<option value="${s.id}">${s.icon || '🏆'} ${s.name}</option>`; });
+                catSel.innerHTML = html;
+            }
+
+            const secEl = document.getElementById('adminCustomSectionsList');
+            if (secEl) {
+                secEl.innerHTML = (state.customSections || []).map(s => `
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 text-xs">
+                        ${s.icon || '🏆'} ${s.name}
+                        <button type="button" onclick="adminDeleteCustomSection('${s.id}')" class="text-rose-400 font-bold">&times;</button>
+                    </span>
+                `).join('');
+            }
+
+            const stkEl = document.getElementById('adminStocksManagerList');
+            if (stkEl) {
+                stkEl.innerHTML = (state.stocks || []).map(s => `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-[#050B14] border border-white/10 text-xs">
+                        <div><b>${s.name}</b> (${s.ticker}) • <span class="text-[#E5BC82] font-mono-num">${Number(s.price).toFixed(2)} ST</span></div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <button type="button" onclick="adminAdjustStockPrice('${s.id}', 1.1)" class="px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 font-bold">+10%</button>
+                            <button type="button" onclick="adminAdjustStockPrice('${s.id}', 0.9)" class="px-2 py-1 rounded bg-rose-500/20 text-rose-300 font-bold">-10%</button>
+                            <input id="adminSetPrice-${s.id}" type="number" step="0.01" placeholder="New ST" class="w-20 px-2 py-1 rounded bg-[#0E1624] border border-white/15 text-white">
+                            <button type="button" onclick="adminSetExactPrice('${s.id}')" class="px-2 py-1 rounded bg-purple-500/30 text-purple-200 font-bold">Set</button>
+                            <button type="button" onclick="adminDeleteStock('${s.id}')" class="px-2 py-1 rounded bg-rose-600/30 text-rose-200 font-bold">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const newsEl = document.getElementById('adminNewsList');
+            if (newsEl) {
+                newsEl.innerHTML = (state.news || []).map(n => `
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-[#050B14] text-xs">
+                        <span><b>[${n.status}]</b> ${n.headline}</span>
+                        <button type="button" onclick="adminDeleteNews('${n.id}')" class="text-rose-400 font-bold">Delete</button>
+                    </div>
+                `).join('');
+            }
+
+            const usrEl = document.getElementById('adminUsersManagerList');
+            if (usrEl) {
+                usrEl.innerHTML = (state.registeredUsers || []).map(u => {
+                    const tag = state.memberTags?.[u.username]?.text || '';
+                    return `
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-[#050B14] border border-white/10 text-xs">
+                        <div><b>@${u.username}</b> • <span class="text-emerald-400 font-mono-num">${Number(u.cashST || 0).toFixed(2)} ST</span></div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <input id="usrBal-${u.username}" type="number" placeholder="Cash ST" class="w-24 px-2 py-1 rounded bg-[#0E1624] border border-white/15 text-white">
+                            <button type="button" onclick="adminUpdateUserBalance('${u.username}')" class="px-2 py-1 rounded bg-emerald-500/25 text-emerald-200 font-bold">Set ST</button>
+                            <input id="usrTag-${u.username}" type="text" placeholder="Badge" value="${tag}" class="w-20 px-2 py-1 rounded bg-[#0E1624] border border-white/15 text-white">
+                            <button type="button" onclick="adminSetUserTag('${u.username}')" class="px-2 py-1 rounded bg-purple-500/25 text-purple-200 font-bold">Tag</button>
+                            <button type="button" onclick="adminDeleteUser('${u.username}')" class="px-2 py-1 rounded bg-rose-600/30 text-rose-200 font-bold">🗑️</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        function adminUpdateStartingST() {
+            const v = Number(document.getElementById('adminStartingSTInput').value);
+            if (!v || v < 100) return;
+            state.startingST = v;
+            saveStateToStorage(false);
+            renderAllViews();
+            showToast('Starting ST saved & synced!', 'success');
+        }
+
+        function adminAddCustomSection() {
+            const name = document.getElementById('newSecName').value.trim();
+            const icon = document.getElementById('newSecIcon').value.trim() || '🏆';
+            if (!name) return;
+            state.customSections.push({ id: 'sec_' + Date.now(), name, icon });
+            document.getElementById('newSecName').value = '';
+            document.getElementById('newSecIcon').value = '';
+            saveStateToStorage(false);
+            renderAllViews();
+            showToast('Section added & synced!', 'success');
+        }
+
+        function adminDeleteCustomSection(id) {
+            state.customSections = (state.customSections || []).filter(s => s.id !== id);
+            saveStateToStorage(false);
+            renderAllViews();
+        }
+
+        function adminCreateStock(event) {
+            event.preventDefault();
+            const name = document.getElementById('stkName').value.trim();
+            const ticker = document.getElementById('stkTicker').value.trim().toUpperCase();
+            const category = document.getElementById('stkCategory').value;
+            const price = Number(document.getElementById('stkPrice').value);
+            const role = document.getElementById('stkRole').value.trim() || 'Cricketer';
+            const supRaw = document.getElementById('stkSupply').value.trim();
+            const supply = supRaw ? Number(supRaw) : null;
+            const image = document.getElementById('stkImage').value.trim();
+            const audioUrl = document.getElementById('stkAudioUrl').value.trim();
+            const quote = document.getElementById('stkQuote').value.trim();
+
+            state.stocks.unshift({ id: 'stk_' + Date.now(), name, ticker, category, price, prevPrice: price, role, supply, image, audioUrl, quote });
+            event.target.reset();
+            saveStateToStorage(false);
+            renderAllViews();
+            showToast(name + ' listed & synced!', 'success');
+        }
+
+        function adminAdjustStockPrice(id, mult) {
+            const s = (state.stocks || []).find(x => x.id === id);
+            if (!s) return;
+            s.prevPrice = s.price;
+            s.price = Number(Math.max(1, s.price * mult).toFixed(2));
+            saveStateToStorage(false);
+            renderAllViews();
+        }
+
+        function adminSetExactPrice(id) {
+            const s = (state.stocks || []).find(x => x.id === id);
+            const inp = document.getElementById('adminSetPrice-' + id);
+            if (!s || !inp || !inp.value) return;
+            s.prevPrice = s.price;
+            s.price = Number(Math.max(1, Number(inp.value)).toFixed(2));
+            inp.value = '';
+            saveStateToStorage(false);
+            renderAllViews();
+        }
+
+        function adminDeleteStock(id) {
+            state.stocks = (state.stocks || []).filter(x => x.id !== id);
+            saveStateToStorage(false);
+            renderAllViews();
+        }
+
+        function adminAddNews(event) {
+            event.preventDefault();
+            const headline = document.getElementById('newsHeadlineInput').value.trim();
+            const status = document.getElementById('newsSentimentInput').value;
+            if (!headline) return;
+            state.news.unshift({ id: 'news-' + Date.now(), headline, status, timestamp: new Date().toLocaleTimeString() });
+            document.getElementById('newsHeadlineInput').value = '';
+            saveStateToStorage(false);
+            renderAllViews();
+            showToast('News broadcasted!', 'success');
+        }
+
+        function adminDeleteNews(id) {
+            state.news = (state.news || []).filter(n => n.id !== id);
+            saveStateToStorage(false);
+            renderAllViews();
+        }
+
+        function adminUpdateUserBalance(username) {
+            const inp = document.getElementById('usrBal-' + username);
+            if (!inp || inp.value === '') return;
+            const u = (state.registeredUsers || []).find(x => x.username === username);
+            if (!u) return;
+            u.cashST = Number(inp.value);
+            inp.value = '';
+            saveStateToStorage(false);
+            renderAllViews();
+            showToast('Updated @' + username + ' balance!', 'success');
+        }
+
+        function adminSetUserTag(username) {
+            const inp = document.getElementById('usrTag-' + username);
+            if (!inp) return;
+            const val = inp.value.trim();
+            if (!val) delete state.memberTags[username];
+            else state.memberTags[username] = { text: val, color: '#D6AA72' };
+            saveStateToStorage(false);
+            renderAllViews();
+        }
+
+        function adminDeleteUser(username) {
+            state.registeredUsers = (state.registeredUsers || []).filter(u => u.username !== username);
+            delete state.memberTags[username];
+            saveStateToStorage(false);
+            renderAllViews();
+        }
+
+        function openLegalModal(type) {
+            const modal = document.getElementById('legalModal');
+            const title = document.getElementById('legalModalTitle');
+            const body = document.getElementById('legalModalBody');
+            modal.classList.remove('hidden');
+            if (type === 'privacy') {
+                title.textContent = 'Privacy Policy';
+                body.innerHTML = `<p>International Cricket Exchange (ICE) stores virtual game progress using localStorage and Supabase cloud sync. Third-party ad partners (such as Google AdSense) may use cookies to serve relevant ads.</p>`;
+            } else if (type === 'terms') {
+                title.textContent = 'Terms of Service';
+                body.innerHTML = `<p>ICE is a 100% free-to-play virtual fantasy simulation. "ST" currency has zero real-world monetary value and cannot be cashed out or wagered.</p>`;
+            } else {
+                title.textContent = 'About & Contact';
+                body.innerHTML = `<p>International Cricket Exchange (ICE) is an interactive cricket stock market game created for cricket fans worldwide.</p>`;
+            }
+        }
+
+        function closeLegalModal() {
+            document.getElementById('legalModal').classList.add('hidden');
+        }
+
+        function showToast(msg, type) {
+            const box = document.getElementById('toastBox');
+            if (!box) return;
+            box.textContent = msg;
+            box.className = 'fixed bottom-4 right-4 left-4 sm:left-auto z-50 px-4 py-3 rounded-xl font-bold text-xs shadow-2xl ' +
+                (type === 'error' ? 'bg-rose-600 text-white' : 'gold-gradient text-slate-950');
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 3200);
+        }
+
+        function renderAllViews() {
+            renderHeaderSummary();
+            renderNavTabs();
+            renderMarketGrid();
+            renderPortfolio();
+            renderLeaderboard();
+            renderNews();
+            renderAdminPanel();
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            loadStateFromStorage();
+            renderAuthGateOrMainApp();
+            renderAllViews();
+            await pullMarketFromCloud(false);
+            setInterval(() => pullMarketFromCloud(false), 8000);
+        });
+    </script>
+</body>
+</html>
