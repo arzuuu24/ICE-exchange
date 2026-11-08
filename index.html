@@ -2643,22 +2643,30 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         async function handleGateSignIn(event) {
-            event.preventDefault();
-            const username = document.getElementById('loginUsernameInput').value.trim();
-            const password = document.getElementById('loginPasswordInput').value;
-            const errEl = document.getElementById('gateSignInError');
-            errEl.classList.add('hidden');
+    event.preventDefault();
+    const username = document.getElementById('loginUsernameInput').value.trim();
+    const password = document.getElementById('loginPasswordInput').value;
+    const errEl = document.getElementById('gateSignInError');
+    errEl.classList.add('hidden');
 
-            if (username.toLowerCase() === ADMIN_USERNAME) {
+    if (username.toLowerCase() === ADMIN_USERNAME) {
         let isValidAdmin = false;
+        let rpcErrorMsg = '';
         try {
             if (supabaseClient) {
                 const { data, error } = await supabaseClient.rpc('verify_admin_secret', {
                     input_secret: password
                 });
+                if (error) {
+                    rpcErrorMsg = error.message;
+                    console.error('RPC Error:', error);
+                }
                 isValidAdmin = Boolean(data);
+            } else {
+                rpcErrorMsg = 'Supabase client not connected.';
             }
         } catch (e) {
+            rpcErrorMsg = e.message;
             console.error('Supabase admin check failed:', e);
         }
 
@@ -2675,7 +2683,7 @@ window.addEventListener('DOMContentLoaded', () => {
             showToast('Welcome Admin! Full exchange control panel unlocked.', 'success');
             return;
         } else {
-            errEl.textContent = 'Invalid Admin credentials.';
+            errEl.textContent = rpcErrorMsg ? ('Supabase Error: ' + rpcErrorMsg) : 'Invalid Admin credentials.';
             errEl.classList.remove('hidden');
             return;
         }
