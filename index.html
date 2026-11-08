@@ -2335,15 +2335,68 @@
         }
 
         function saveStateToStorage() {
-            try {
-                syncActiveUserToRegistry();
+    try {
+        syncActiveUserToRegistry();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        syncStateWithSupabase();
+        pushMarketToCloud();
+    } catch (err) {
+        console.error('Failed to save state:', err);
+    }
+}
+
+async function pushMarketToCloud() {
+    if (!supabaseClient) return;
+    try {
+        await supabaseClient.from('exchange_global_state').upsert({
+            id: 1,
+            stocks: state.stocks || [],
+            custom_sections: state.customSections || [],
+            news: state.news || [],
+            updated_at: new Date().toISOString()
+        });
+    } catch (err) {
+        console.warn('Cloud push error:', err);
+    }
+}
+
+async function pullMarketFromCloud() {
+    if (!supabaseClient) return;
+    try {
+        const { data: globalData } = await supabaseClient
+            .from('exchange_global_state')
+            .select('*')
+            .eq('id', 1)
+            .single();
+
+        if (globalData) {
+            let changed = false;
+            if (Array.isArray(globalData.stocks) && globalData.stocks.length > 0) {
+                state.stocks = globalData.stocks;
+                changed = true;
+            }
+            if (Array.isArray(globalData.custom_sections) && globalData.custom_sections.length > 0) {
+                state.customSections = globalData.custom_sections;
+                changed = true;
+            }
+            if (Array.isArray(globalData.news) && globalData.news.length > 0) {
+                state.news = globalData.news;
+                changed = true;
+            }
+            if (changed) {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-                syncStateWithSupabase();
-            } catch (err) {
-                console.error('Failed to save state:', err);
+                if (typeof renderAllViews === 'function') renderAllViews();
             }
         }
+    } catch (err) {
+        console.warn('Cloud pull error:', err);
+    }
+}
 
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(pullMarketFromCloud, 800);
+    setInterval(pullMarketFromCloud, 10000);
+});
         function syncActiveUserToRegistry() {
             if (!state.isAuthenticated || state.isAdmin) return;
             state.registeredUsers = state.registeredUsers || [];
