@@ -2348,21 +2348,22 @@
 async function pushMarketToCloud() {
     if (!supabaseClient) return;
     try {
-        const marketPayload = {
-            stocks: state.stocks || [],
-            limitedStocks: state.limitedStocks || [],
-            commentatorStocks: state.commentatorStocks || [],
-            customStocks: state.customStocks || [],
-            startingCash: state.startingCash || 10000
-        };
+        // Save a complete snapshot of all market data (excluding personal login flags)
+        const fullSnapshot = Object.assign({}, state);
+        delete fullSnapshot.isAuthenticated;
+        delete fullSnapshot.isAdmin;
+        delete fullSnapshot.hasEnteredFloor;
+        delete fullSnapshot.traderHandle;
+        delete fullSnapshot.cashST;
+        delete fullSnapshot.holdings;
+
         await supabaseClient.from('exchange_global_state').upsert({
             id: 1,
-            stocks: marketPayload,
+            stocks: fullSnapshot,
             custom_sections: state.customSections || [],
             news: state.news || [],
             updated_at: new Date().toISOString()
         });
-        console.log('Cloud sync complete!');
     } catch (err) {
         console.warn('Cloud push error:', err);
     }
@@ -2371,50 +2372,40 @@ async function pushMarketToCloud() {
 async function pullMarketFromCloud() {
     if (!supabaseClient) return;
     try {
-        const { data: globalData, error } = await supabaseClient
+        const { data: globalData } = await supabaseClient
             .from('exchange_global_state')
             .select('*')
             .eq('id', 1)
             .maybeSingle();
 
-        // If the cloud table is empty, automatically upload this device's stocks to the cloud!
-        if (!globalData) {
-            if ((state.stocks && state.stocks.length > 0) || (state.news && state.news.length > 0)) {
-                await pushMarketToCloud();
-            }
-            return;
-        }
+        if (!globalData) return;
 
-        let changed = false;
-        if (globalData.stocks) {
-            // Handle both array format and full bundle format
-            if (Array.isArray(globalData.stocks)) {
-                if (globalData.stocks.length > 0) {
-                    state.stocks = globalData.stocks;
-                    changed = true;
-                } else if (state.stocks && state.stocks.length > 0) {
-                    // Cloud is empty but local device has stocks -> push local to cloud!
-                    await pushMarketToCloud();
-                    return;
+        // Check if cloud has the full snapshot object
+        if (globalData.stocks && !Array.isArray(globalData.stocks) && typeof globalData.stocks === 'object') {
+            const snap = globalData.stocks;
+            // Restore all market lists from the cloud snapshot while keeping current user logged in
+            Object.keys(snap).forEach(key => {
+                if (!['isAuthenticated', 'isAdmin', 'hasEnteredFloor', 'traderHandle', 'cashST', 'holdings'].includes(key)) {
+                    // Only overwrite local arrays if the cloud version actually has items
+                    if (Array.isArray(snap[key])) {
+                        if (snap[key].length > 0 || !Array.isArray(state[key]) || state[key].length === 0) {
+                            state[key] = snap[key];
+                        }
+                    } else if (snap[key] !== undefined) {
+                        state[key] = snap[key];
+                    }
                 }
-            } else if (typeof globalData.stocks === 'object') {
-                const b = globalData.stocks;
-                const cloudHasData = (b.stocks && b.stocks.length > 0) || (b.limitedStocks && b.limitedStocks.length > 0) || (b.commentatorStocks && b.commentatorStocks.length > 0);
-                const localHasData = (state.stocks && state.stocks.length > 0) || (state.limitedStocks && state.limitedStocks.length > 0) || (state.commentatorStocks && state.commentatorStocks.length > 0);
-                
-                if (cloudHasData) {
-                    state.stocks = b.stocks || [];
-                    state.limitedStocks = b.limitedStocks || [];
-                    state.commentatorStocks = b.commentatorStocks || [];
-                    state.customStocks = b.customStocks || [];
-                    if (b.startingCash) state.startingCash = b.startingCash;
-                    changed = true;
-                } else if (localHasData) {
-                    await pushMarketToCloud();
-                    return;
-                }
-            }
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            if (typeof renderAllViews === 'function') renderAllViews();
+        } else if (Array.isArray(globalData.stocks) && globalData.stocks.length === 0) {
+            // Cloud currently has [] (empty array), so push this device's data up to the cloud!
+            await pushMarketToCloud();
         }
+    } catch (err) {
+        console.warn('Cloud pull error:', err);
+    }
+}
 
         if (Array.isArray(globalData.custom_sections) && globalData.custom_sections.length > 0) {
             state.customSections = globalData.custom_sections;
