@@ -2348,7 +2348,6 @@
 async function pushMarketToCloud() {
     if (!supabaseClient) return;
     try {
-        // Save a complete snapshot of all market data (excluding personal login flags)
         const fullSnapshot = Object.assign({}, state);
         delete fullSnapshot.isAuthenticated;
         delete fullSnapshot.isAdmin;
@@ -2380,13 +2379,11 @@ async function pullMarketFromCloud() {
 
         if (!globalData) return;
 
-        // Check if cloud has the full snapshot object
+        let changed = false;
         if (globalData.stocks && !Array.isArray(globalData.stocks) && typeof globalData.stocks === 'object') {
             const snap = globalData.stocks;
-            // Restore all market lists from the cloud snapshot while keeping current user logged in
             Object.keys(snap).forEach(key => {
                 if (!['isAuthenticated', 'isAdmin', 'hasEnteredFloor', 'traderHandle', 'cashST', 'holdings'].includes(key)) {
-                    // Only overwrite local arrays if the cloud version actually has items
                     if (Array.isArray(snap[key])) {
                         if (snap[key].length > 0 || !Array.isArray(state[key]) || state[key].length === 0) {
                             state[key] = snap[key];
@@ -2396,6 +2393,34 @@ async function pullMarketFromCloud() {
                     }
                 }
             });
+            changed = true;
+        } else if (Array.isArray(globalData.stocks) && globalData.stocks.length === 0) {
+            await pushMarketToCloud();
+            return;
+        }
+
+        if (Array.isArray(globalData.custom_sections) && globalData.custom_sections.length > 0) {
+            state.customSections = globalData.custom_sections;
+            changed = true;
+        }
+        if (Array.isArray(globalData.news) && globalData.news.length > 0) {
+            state.news = globalData.news;
+            changed = true;
+        }
+
+        if (changed) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            if (typeof renderAllViews === 'function') renderAllViews();
+        }
+    } catch (err) {
+        console.warn('Cloud pull error:', err);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(pullMarketFromCloud, 800);
+    setInterval(pullMarketFromCloud, 10000);
+});
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             if (typeof renderAllViews === 'function') renderAllViews();
         } else if (Array.isArray(globalData.stocks) && globalData.stocks.length === 0) {
