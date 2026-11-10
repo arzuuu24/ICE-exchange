@@ -2804,5 +2804,103 @@
             setInterval(() => pullMarketFromCloud(false), 8000);
         });
     </script>
+
+    <!-- PLAYER ROLE FILTER & 1-CLICK ADMIN CLASSIFIER PLUG-IN -->
+<script>
+(function() {
+    window.activeRoleFilter = 'ALL';
+    const ROLES = [
+        { id: 'ALL', label: 'All Players' },
+        { id: 'Batter', label: '🏏 Batters' },
+        { id: 'All-Rounder', label: '⚡ All-Rounders' },
+        { id: 'Wicket-Keeper', label: '🧤 Wicket-Keepers' },
+        { id: 'Bowler', label: '🎯 Bowlers' }
+    ];
+
+    // 1. Inject the Role Filter Bar right above the Market Stocks Grid
+    function injectRoleFilterBar() {
+        const grid = document.getElementById('marketStocksGrid');
+        if (!grid || document.getElementById('roleFilterBar')) return;
+        const bar = document.createElement('div');
+        bar.id = 'roleFilterBar';
+        bar.className = 'flex items-center gap-2 overflow-x-auto no-scrollbar pb-1';
+        grid.parentNode.insertBefore(bar, grid);
+        renderRolePills();
+    }
+
+    window.setPlayerRoleFilter = function(roleId) {
+        window.activeRoleFilter = roleId;
+        renderRolePills();
+        if (typeof window.renderMarketGrid === 'function') window.renderMarketGrid();
+    };
+
+    function renderRolePills() {
+        const bar = document.getElementById('roleFilterBar');
+        if (!bar) return;
+        bar.innerHTML = ROLES.map(r => {
+            const active = window.activeRoleFilter === r.id;
+            return `<button type="button" onclick="window.setPlayerRoleFilter('${r.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition ${active ? 'teal-gradient text-white shadow' : 'bg-slate-500/10 text-muted hover:opacity-80'}">${r.label}</button>`;
+        }).join('');
+    }
+
+    // 2. 1-Click Role Assigner for your 20+ existing stocks in Admin
+    window.quickAssignRole = function(stockId, newRole) {
+        const stk = (state.stocks || []).find(s => s.id === stockId);
+        if (!stk) return;
+        stk.role = newRole;
+        saveStateToStorage(false);
+        renderAllViews();
+        if (typeof showToast === 'function') showToast(stk.ticker + ' tagged as ' + newRole + '!', 'success');
+    };
+
+    // 3. Hook into renderMarketGrid & renderAdminPanel non-destructively
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            injectRoleFilterBar();
+
+            const origMarket = window.renderMarketGrid;
+            if (typeof origMarket === 'function') {
+                window.renderMarketGrid = function() {
+                    origMarket();
+                    injectRoleFilterBar();
+                    if (window.activeRoleFilter && window.activeRoleFilter !== 'ALL') {
+                        const grid = document.getElementById('marketStocksGrid');
+                        if (!grid) return;
+                        Array.from(grid.children).forEach(card => {
+                            const text = card.innerText || '';
+                            if (!text.toLowerCase().includes(window.activeRoleFilter.toLowerCase())) {
+                                card.style.display = 'none';
+                            }
+                        });
+                    }
+                };
+            }
+
+            const origAdmin = window.renderAdminPanel;
+            if (typeof origAdmin === 'function') {
+                window.renderAdminPanel = function() {
+                    origAdmin();
+                    const stkList = document.getElementById('adminStocksManagerList');
+                    if (!stkList || !state.stocks) return;
+                    Array.from(stkList.children).forEach((row, idx) => {
+                        const stk = state.stocks[idx];
+                        if (!stk || row.querySelector('.quick-role-bar')) return;
+                        const roleBar = document.createElement('div');
+                        roleBar.className = 'quick-role-bar flex items-center gap-1 flex-wrap mt-2 pt-2 border-t border-white/10 w-full text-[10px]';
+                        roleBar.innerHTML = `<span class="text-slate-400 font-bold mr-1">1-Click Role:</span>` +
+                            ['🏏 Batter', '⚡ All-Rounder', '🧤 Wicket-Keeper', '🎯 Bowler'].map(r => {
+                                const isCur = (stk.role || '').toLowerCase().includes(r.split(' ')[1].toLowerCase());
+                                return `<button type="button" onclick="window.quickAssignRole('${stk.id}', '${r}')" class="px-2 py-0.5 rounded font-bold transition ${isCur ? 'bg-[#07A34E] text-white' : 'bg-white/10 text-slate-300 hover:bg-white/20'}">${r}</button>`;
+                            }).join('');
+                        row.appendChild(roleBar);
+                    });
+                };
+            }
+
+            if (typeof window.renderAllViews === 'function') window.renderAllViews();
+        }, 300);
+    });
+})();
+</script>
 </body>
 </html>
